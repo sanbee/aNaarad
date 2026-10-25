@@ -1,0 +1,84 @@
+Buildfile: /export/home/langur/sbhatnag/Projects/Git/Android/aNaarad/build.xml
+
+-set-mode-check:
+
+-set-debug-files:
+
+-check-env:
+ [checkenv] Android SDK Tools Revision 24.0.2
+ [checkenv] Installed at /export/home/langur/sbhatnag/bin/android-sdk-linux_x86/adt-bundle-linux-x86_64-20140702/sdk
+
+-setup:
+     [echo] Project Name: Naarad
+  [gettype] Project Type: Application
+
+-set-debug-mode:
+
+-debug-obfuscation-check:
+
+-pre-build:
+
+-build-setup:
+[getbuildtools] Using latest Build Tools: 20.0.0
+     [echo] Resolving Build Target for Naarad...
+[gettarget] Project Target:   Google APIs
+[gettarget] Vendor:           Google Inc.
+[gettarget] Platform Version: 4.4.2
+[gettarget] API level:        19
+     [echo] ----------
+     [echo] Creating output directories if needed...
+     [echo] ----------
+     [echo] Resolving Dependencies for Naarad...
+[dependency] Library dependencies:
+[dependency] No Libraries
+[dependency] 
+[dependency] ------------------
+     [echo] ----------
+     [echo] Building Libraries with 'debug'...
+   [subant] No sub-builds to iterate on
+
+-code-gen:
+[mergemanifest] No changes in the AndroidManifest files.
+     [echo] Handling aidl files...
+     [aidl] No AIDL files to compile.
+     [echo] ----------
+     [echo] Handling RenderScript files...
+     [echo] ----------
+     [echo] Handling Resources...
+     [aapt] No changed resources. R.java and Manifest.java untouched.
+     [echo] ----------
+     [echo] Handling BuildConfig class...
+[buildconfig] No need to generate new BuildConfig.
+
+-pre-compile:
+
+-compile:
+    [javac] Compiling 2 source files to /export/home/langur/sbhatnag/Projects/Git/Android/aNaarad/bin/classes
+    [javac] /export/home/langur/sbhatnag/Projects/Git/Android/aNaarad/src/naarad/client/tabhost/NaaradSensorDataSource.java:284: error: cannot find symbol
+    [javac] 	    if ((mTimeChartView != null) && (stopRecording==false))
+    [javac] 	         ^
+    [javac]   symbol:   variable mTimeChartView
+    [javac]   location: class NaaradSensorDataSource
+    [javac] /export/home/langur/sbhatnag/Projects/Git/Android/aNaarad/src/naarad/client/tabhost/NaaradSensorDataSource.java:286: error: cannot find symbol
+    [javac] 		    mTimeChartView.zoomReset();
+    [javac] 		    ^
+    [javac]   symbol:   variable mTimeChartView
+    [javac]   location: class NaaradSensorDataSource
+    [javac] /export/home/langur/sbhatnag/Projects/Git/Android/aNaarad/src/naarad/client/tabhost/NaaradSensorDataSource.java:287: error: cannot find symbol
+    [javac] 		    mRenderer.setYAxisMax(yMax+0.2);
+    [javac] 		    ^
+    [javac]   symbol:   variable mRenderer
+    [javac]   location: class NaaradSensorDataSource
+    [javac] /export/home/langur/sbhatnag/Projects/Git/Android/aNaarad/src/naarad/client/tabhost/NaaradSensorDataSource.java:288: error: cannot find symbol
+    [javac] 		    mRenderer.setYAxisMin(yMin-0.2);
+    [javac] 		    ^
+    [javac]   symbol:   variable mRenderer
+    [javac]   location: class NaaradSensorDataSource
+    [javac] /export/home/langur/sbhatnag/Projects/Git/Android/aNaarad/src/naarad/client/tabhost/NaaradSensorDataSource.java:291: error: cannot find symbol
+    [javac] 		    mTimeChartView.repaint();
+    [javac] 		    ^
+    [javac]   symbol:   variable mTimeChartView
+    [javac]   location: class NaaradSensorDataSource
+    [javac] Note: /export/home/langur/sbhatnag/Projects/Git/Android/aNaarad/src/naarad/client/tabhost/NaaradUtils.java uses unchecked or unsafe operations.
+    [javac] Note: Recompile with -Xlint:unchecked for details.
+    [javac] 5 errors

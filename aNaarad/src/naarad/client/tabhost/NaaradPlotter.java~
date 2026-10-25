@@ -1,0 +1,26 @@
+    private void initMultiRenderer(XYMultipleSeriesRenderer multiRenderer)
+    {
+	mRenderer.setApplyBackgroundColor(true);
+	mRenderer.setBackgroundColor(Color.argb(100, 50, 50, 50));
+	mRenderer.setAxisTitleTextSize(10);
+	mRenderer.setChartTitleTextSize(10);
+	mRenderer.setLabelsTextSize(10);
+	mRenderer.setLegendTextSize(10);
+	mRenderer.setMargins(new int[] { 2, 20, 5, 2 }); //Top, Left, Bottom, Right
+	mRenderer.setZoomButtonsVisible(false);
+	mRenderer.setPointSize(2);
+	mRenderer.setXTitle("");
+	mRenderer.setYTitle("Temperature");
+	mRenderer.setShowGrid(true);
+	mRenderer.setShowLegend(false);
+	//mRenderer.setShowLegend(true);
+	mRenderer.setXLabels(10); // No. of xtics
+	mRenderer.setClickEnabled(false);
+	mRenderer.setPanEnabled(false);
+	//multiRenderer.setMarginsColor(Color.argb(0x00, 0xff, 0x00, 0x00));
+	DisplayMetrics metrics = getResources().getDisplayMetrics();
+	float val = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 12, metrics);
+	mRenderer.setLabelsTextSize(val);
+	val = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 8, metrics);
+	mRenderer.setTextTypeface("sans_serif",Typeface.BOLD);
+    }
