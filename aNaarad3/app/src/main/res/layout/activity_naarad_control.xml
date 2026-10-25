@@ -1,0 +1,160 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+		xmlns:tools="http://schemas.android.com/tools"
+		android:layout_width="match_parent"
+		android:layout_height="match_parent"
+		android:paddingBottom="@dimen/activity_vertical_margin"
+		android:paddingLeft="@dimen/activity_horizontal_margin"
+		android:paddingRight="@dimen/activity_horizontal_margin"
+		android:paddingTop="@dimen/activity_vertical_margin"
+		android:background="@drawable/ourhouse2"
+		android:alpha="0.7"
+		android:id="@+id/controlRL"
+		tools:context=".NaaradClientActivity">
+  
+  <ToggleButton
+     android:id="@+id/lamp0"
+     android:layout_width="wrap_content"
+     android:layout_height="wrap_content"
+     android:layout_centerVertical="true"
+     android:layout_alignParentRight="true"
+     android:layout_alignParentTop="true"
+     android:textStyle="bold"
+     android:textOn="Lamp 1"
+     android:textOff="Lamp 1"
+     android:minHeight="0dp"
+     android:minWidth="0dp"
+     android:text="Lamp1" />
+  <ToggleButton
+     android:id="@+id/lamp1"
+     android:layout_width="wrap_content"
+     android:layout_height="wrap_content"
+     android:layout_centerVertical="true"
+     android:layout_alignParentRight="true"
+     android:textStyle="bold"
+     android:layout_below="@+id/lamp0"
+     android:minHeight="0dp"
+     android:minWidth="0dp"
+     android:textOn="Lamp 2"
+     android:textOff="Lamp 2"
+     android:text="Lamp2" />
+  <ToggleButton
+     android:id="@+id/lamp2"
+     android:layout_width="wrap_content"
+     android:layout_height="wrap_content"
+     android:layout_centerVertical="true"
+     android:layout_alignParentRight="true"
+     android:textStyle="bold"
+     android:layout_below="@+id/lamp1"
+     android:minHeight="0dp"
+     android:minWidth="0dp"
+     android:textOn="Lamp 3"
+     android:textOff="Lamp 3"
+     android:text="Lamp3" />
+  
+  <ImageView
+     android:id="@+id/iv3"
+     android:layout_width="20dp"
+     android:layout_height="20dp"
+     android:layout_alignParentRight="true"
+     android:src="@drawable/lamp_off"
+     android:layout_marginTop="50dp"
+     android:layout_marginRight="165dp"
+     android:longClickable="true"
+     android:background="#0000ff00"
+     />
+  <ImageView
+     android:id="@+id/iv1"
+     android:layout_width="20dp"
+     android:layout_height="20dp"
+     android:layout_alignParentRight="true"
+     android:src="@drawable/lamp_off"
+     android:layout_marginTop="105dp"
+     android:layout_marginRight="395dp"
+     />
+  <ImageView
+     android:id="@+id/iv2"
+     android:layout_width="20dp"
+     android:layout_height="20dp"
+     android:layout_alignParentRight="true"
+     android:src="@drawable/lamp_off"
+     android:layout_marginTop="140dp"
+     android:layout_marginRight="330dp"
+     android:text="  1"
+     />
+  <TextView
+     android:id="@+id/myImageViewText1"
+     android:layout_width="wrap_content"
+     android:layout_height="wrap_content"
+     android:layout_alignLeft="@+id/iv1"
+     android:layout_alignTop="@+id/iv1"
+     android:layout_alignRight="@+id/iv1"
+     android:layout_alignBottom="@+id/iv1"
+     android:layout_margin="1dp"
+     android:gravity="center"
+     android:textStyle="bold"
+     android:text="   1"/>
+  <TextView
+     android:id="@+id/myImageViewText2"
+     android:layout_width="wrap_content"
+     android:layout_height="wrap_content"
+     android:layout_alignLeft="@+id/iv2"
+     android:layout_alignTop="@+id/iv2"
+     android:layout_alignRight="@+id/iv2"
+     android:layout_alignBottom="@+id/iv2"
+     android:layout_margin="1dp"
+     android:gravity="center"
+     android:textStyle="bold"
+     android:text="   2"/>
+  <TextView
+     android:id="@+id/myImageViewText3"
+     android:layout_width="wrap_content"
+     android:layout_height="wrap_content"
+     android:layout_alignLeft="@+id/iv3"
+     android:layout_alignTop="@+id/iv3"
+     android:layout_alignRight="@+id/iv3"
+     android:layout_alignBottom="@+id/iv3"
+     android:layout_margin="1dp"
+     android:gravity="center"
+     android:textStyle="bold"
+     android:text="   3"/>
+  <TextView
+     android:id="@+id/tv1"
+     android:layout_width="45dp"
+     android:layout_height="25dp"
+     android:layout_alignParentRight="true"
+     android:background="@drawable/speech_bubble_l_orange"
+     android:text="2.73K"
+     android:layout_marginRight="285dp"
+     android:layout_marginTop="120dp"
+     />
+  <TextView
+     android:id="@+id/tv2"
+     android:layout_height="wrap_content"
+     android:layout_width="wrap_content"
+     android:layout_alignParentRight="true"
+     android:background="@drawable/speech_bubble_l_orange"
+     android:text="2.73K"
+     android:layout_marginRight="275dp"
+     android:layout_marginTop="35dp"
+     />
+
+  
+</RelativeLayout>
+     <!-- android:src="@drawable/lamp_off" -->
+<!-- android:src="@drawable/lamp_off_crop" -->
+<!-- android:src="@drawable/ic_launcher_bg" -->
+<!-- android:background="@android:color/transparent" -->
+     <!-- style="?android:attr/borderlessButtonStyle" -->
+
+  <!-- <ToggleButton -->
+  <!--    android:id="@+id/plotoverlay" -->
+  <!--    android:layout_width="wrap_content" -->
+  <!--    android:layout_height="wrap_content" -->
+  <!--    android:layout_centerVertical="true" -->
+  <!--    android:layout_alignParentRight="true" -->
+  <!--    android:layout_below="@+id/lamp2" -->
+  <!--    android:minHeight="0dp" -->
+  <!--    android:minWidth="0dp" -->
+  <!--    android:textOn="Plot Off" -->
+  <!--    android:textOff="Plot On " -->
+  <!--    android:text="Plot" /> -->

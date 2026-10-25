@@ -1,3 +1,4 @@
+// -*- JAVA -*-
 package naarad.client.tabhost;
 
 import android.support.v4.app.Fragment;
