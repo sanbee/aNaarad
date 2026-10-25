@@ -1,0 +1,21 @@
+/export/home/langur/sbhatnag/Projects/Git/Android/SpeechToText/bin/SpeechToText.ap_ \
+ : /export/home/langur/sbhatnag/Projects/Git/Android/SpeechToText/res/values-v11/styles.xml \
+/export/home/langur/sbhatnag/Projects/Git/Android/SpeechToText/res/drawable-xhdpi/ic_launcher.png \
+/export/home/langur/sbhatnag/Projects/Git/Android/SpeechToText/res/drawable-xxhdpi/ic_launcher.png \
+/export/home/langur/sbhatnag/Projects/Git/Android/SpeechToText/res/menu/main.xml \
+/export/home/langur/sbhatnag/Projects/Git/Android/SpeechToText/res/values/strings.xml \
+/export/home/langur/sbhatnag/Projects/Git/Android/SpeechToText/res/values/styles.xml \
+/export/home/langur/sbhatnag/Projects/Git/Android/SpeechToText/res/values/colors.xml \
+/export/home/langur/sbhatnag/Projects/Git/Android/SpeechToText/res/values/dimens.xml \
+/export/home/langur/sbhatnag/Projects/Git/Android/SpeechToText/res/drawable-mdpi/ic_launcher.png \
+/export/home/langur/sbhatnag/Projects/Git/Android/SpeechToText/res/drawable-hdpi/microphone.png \
+/export/home/langur/sbhatnag/Projects/Git/Android/SpeechToText/res/drawable-hdpi/ic_launcher.png \
+/export/home/langur/sbhatnag/Projects/Git/Android/SpeechToText/res/layout/activity_main.xml \
+/export/home/langur/sbhatnag/Projects/Git/Android/SpeechToText/res/values-v14/styles.xml \
+/export/home/langur/sbhatnag/Projects/Git/Android/SpeechToText/res/values-w820dp/dimens.xml \
+/export/home/langur/sbhatnag/Projects/Git/Android/SpeechToText/bin/res/drawable-xhdpi/ic_launcher.png \
+/export/home/langur/sbhatnag/Projects/Git/Android/SpeechToText/bin/res/drawable-xxhdpi/ic_launcher.png \
+/export/home/langur/sbhatnag/Projects/Git/Android/SpeechToText/bin/res/drawable-mdpi/ic_launcher.png \
+/export/home/langur/sbhatnag/Projects/Git/Android/SpeechToText/bin/res/drawable-hdpi/microphone.png \
+/export/home/langur/sbhatnag/Projects/Git/Android/SpeechToText/bin/res/drawable-hdpi/ic_launcher.png \
+/export/home/langur/sbhatnag/Projects/Git/Android/SpeechToText/bin/AndroidManifest.xml \

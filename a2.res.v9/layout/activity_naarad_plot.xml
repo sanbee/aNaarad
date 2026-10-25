@@ -1,0 +1,49 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+		xmlns:tools="http://schemas.android.com/tools"
+		android:layout_width="match_parent"
+		android:layout_height="match_parent"
+		tools:context=".NaaradClientActivity" 
+		android:id="@+id/plotRL" >
+    <!-- <EditText -->
+    <!--    android:id="@+id/editText1" -->
+    <!--    android:layout_width="wrap_content" -->
+    <!--    android:layout_height="wrap_content" -->
+    <!--    android:layout_alignParentLeft="true" -->
+    <!--    android:layout_alignParentTop="true" -->
+    <!--    android:ems="10" > -->
+    <!--     <requestFocus /> -->
+    <!-- </EditText> -->
+
+    <ToggleButton
+       android:id="@+id/plotButton"
+       android:layout_width="30dp"
+       android:layout_height="30dp"
+       android:layout_alignParentTop="true"
+       android:layout_centerHorizontal="true"
+       android:layout_alignParentRight="true"
+       android:textOn=""
+       android:textOff=""
+       android:padding="0dp"
+       android:layout_margin="0dp"
+       android:textSize="0dp"
+       android:minHeight="0dp"
+       android:minWidth="0dp"
+       android:maxHeight="0dp"
+       android:maxWidth="0dp"
+       />
+       <!-- android:layout_height="174dp" -->
+
+
+    <LinearLayout
+       android:id="@+id/chart"
+       android:layout_width="wrap_content"
+       android:layout_height="wrap_content"
+       android:layout_toLeftOf="@+id/plotButton"
+       />
+
+</RelativeLayout>
+
+    <!-- android:paddingBottom="@dimen/activity_vertical_margin" -->
+    <!-- android:paddingLeft="@dimen/activity_horizontal_margin" -->
+    <!-- android:paddingRight="@dimen/activity_horizontal_margin" -->
+

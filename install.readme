@@ -1,0 +1,55 @@
+o Install android-sdk_r12-linux_x86.tgz
+   - Use the android SDK from ~/bin
+   - start "tools/android update sdk"
+      - This will get the "thrid party packages" + platform specific
+        tools (including adb)
+
+o From the android window, make a new AVD.
+     - Start the AVD
+
+o Install apache-ant-1.8.2-bin.tar.gz
+   - Use ant from ~/bin/apache-ant
+
+o Install zlib-1.2.5.tar.gz
+   - Use libz from ~/Download/export/home/langur/sbhatnag/Downloads/zlib-1.2.5
+     - When building libz, edit "configure" file to remove "-m64" related
+       lines and add "-m32" in "CFLAGS"
+     - Add the path to LD_LIBRARY_PATH
+
+o Install jdk-1_5_0_22-linux-i586.bin and jre-6u26-linux-i586.bin
+  to find Sun security classes, had to install JDK and JRE in ~/Downloads.
+   - Set JAVA_HOME <JDK path>
+
+o Modify /home/tara/sanjay/Projects/Android/start.sh
+   - Run start.sh to set up the PATH and LD_LIBRARY_PATH variables
+
+
+
+o Make a project
+    android create project --package com.example.helloandroid
+--activity HelloAndroid --target 7 --path
+<path-to-your-project>/HelloAndroid   #target 7 is for Android 2.2
+
+    android update project -path <PATH>/HelloAndroid #This makes build.xml
+
+o Compile
+    cd <PATH>/HelloAndroid
+    ant --noconfig install #(compile, sign, make .apk)
+
+o To install:
+   adb install bin/HelloWorld-debug.apk #This send the apk to the emulator
+
+
+
+
+Go to the emulator window, and do what you'd do on Adam to run the
+app.
+
+
+
+You can find all the packages to install in
+/home/tara/sanjay/Projects.  There is also eclipse sitting there...and
+runs, but I lost patience to make it work all the way.  It may be
+useful if we can make it work from there (gives a lot of pop-up help
+that might be useful in this phase where we don't know all the details
+of the Android and related Java class structure).
