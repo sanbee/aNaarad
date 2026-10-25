@@ -1,0 +1,13 @@
+<?xml version='1.0' encoding='utf-8' standalone='yes' ?>
+<map>
+<int name="bulbX1" value="281" />
+<int name="bubbleX1" value="281" />
+<int name="bulbX2" value="536" />
+<int name="bubbleX0" value="173" />
+<int name="bulbX0" value="173" />
+<int name="bulbY0" value="170" />
+<int name="bulbY1" value="234" />
+<int name="bulbY2" value="115" />
+<int name="bubbleY0" value="170" />
+<int name="bubbleY1" value="234" />
+</map>

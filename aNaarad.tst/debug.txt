@@ -1,0 +1,6 @@
+D/publishJSON: ( 1008): 122 {"node_v": 2.49, "node_p": -42, "rf_fail": 0, "source": "RS0", "node_id": 1, "time": 1511496562369.373, "degc": 19.54}
+D/getDataOnly:( 1008): Stale data detected: 2.0282994379882813E7 7200000.0 true true
+D/publishJSON: ( 1008): 122 {"node_v": 2.54, "node_p": -41, "rf_fail": 0, "source": "RS0", "node_id": 3, "time": 1511496522730.132, "degc": 19.17}
+D/getDataOnly:( 1008): Returning false
+W/InputManagerService(   59): Window already focused, ignoring focus gain of: com.android.internal.view.IInputMethodClient$Stub$Proxy@485eafa8
+
