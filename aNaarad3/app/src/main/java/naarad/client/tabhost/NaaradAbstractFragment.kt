@@ -57,8 +57,8 @@ abstract class NaaradAbstractFragment : Fragment() {
 
     fun mapNodeID2Ndx(nodeid: Int): Int {
         if (nodeid == 1) return 0
-        else if (nodeid == 3) return 1
-        else return -1
+        if (nodeid == 3) return 1
+        return Math.abs(nodeid) % 2
     }
 
     fun recreateView(v: View?): Boolean {
@@ -69,49 +69,44 @@ abstract class NaaradAbstractFragment : Fragment() {
     }
 
     fun setPreference(name: String?, value: String?) {
-        prefs = mActivity!!.getSharedPreferences("nSettings", Context.MODE_PRIVATE)
+        val ctx = activity ?: mActivity ?: return
+        prefs = ctx.getSharedPreferences("nSettings", Context.MODE_PRIVATE)
         val editor: SharedPreferences.Editor = prefs!!.edit()
         editor.putString(name, value)
         editor.commit()
     }
 
     fun setPreference(name: String?, value: Int) {
-        prefs = mActivity!!.getSharedPreferences("nSettings", Context.MODE_PRIVATE)
+        val ctx = activity ?: mActivity ?: return
+        prefs = ctx.getSharedPreferences("nSettings", Context.MODE_PRIVATE)
         val editor: SharedPreferences.Editor = prefs!!.edit()
         editor.putInt(name, value)
         editor.commit()
     }
 
     fun getPreference(name: String?, defValue: Int): Int {
-        prefs = mActivity!!.getSharedPreferences("nSettings", Context.MODE_PRIVATE)
+        val ctx = activity ?: mActivity ?: return defValue
+        prefs = ctx.getSharedPreferences("nSettings", Context.MODE_PRIVATE)
         return prefs?.getInt(name, defValue) ?: defValue
     }
 
     fun getPreference(name: String?, defValue: String?): String? {
-        prefs = mActivity!!.getSharedPreferences("nSettings", Context.MODE_PRIVATE)
+        val ctx = activity ?: mActivity ?: return defValue
+        prefs = ctx.getSharedPreferences("nSettings", Context.MODE_PRIVATE)
         return prefs?.getString(name, defValue) ?: defValue
     }
 
     var serverName: String?
         get() {
-            prefs = mActivity!!.getSharedPreferences(
-                "nSettings",
-                Context.MODE_PRIVATE
-            )
-            return prefs?.getString("serverName", this.defaultServer) ?: this.defaultServer
+            return getPreference("serverName", "raspberrypi") ?: "raspberrypi"
         }
         set(name) {
             setPreference("serverName", name)
         }
 
-
     var serverPort: Int
         get() {
-            prefs = mActivity!!.getSharedPreferences(
-                "nSettings",
-                Context.MODE_PRIVATE
-            )
-            return prefs?.getInt("serverPort", this.defaultPort) ?: this.defaultPort
+            return getPreference("serverPort", 1234)
         }
         set(port) {
             setPreference("serverPort", port)
@@ -201,11 +196,15 @@ abstract class NaaradAbstractFragment : Fragment() {
         socWriter.flush()
     }
 
-    @Throws(IOException::class, UnknownHostException::class)
     fun naaradSocket(hostName: String?, port: Int): Socket? {
-        val clientSoc = Socket(hostName, port)
-        if (clientSoc.isConnected) return clientSoc
-        else return null
+        if (hostName.isNullOrEmpty() || port <= 0) return null
+        return try {
+            val clientSoc = Socket()
+            clientSoc.connect(java.net.InetSocketAddress(hostName, port), 2000)
+            if (clientSoc.isConnected) clientSoc else null
+        } catch (e: Exception) {
+            null
+        }
     }
 
     companion object {

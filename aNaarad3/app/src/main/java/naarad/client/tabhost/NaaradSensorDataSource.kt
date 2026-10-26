@@ -125,20 +125,21 @@ class NaaradSensorDataSource(
         getHistory: Boolean
     ) {
         try {
-	    var port=NaaradUtils.serverPort
-	    var serverName=NaaradUtils.serverName
-            var mySoc: Socket? = NaaradUtils.naaradSocket(serverName, port)
+            val port = NaaradUtils.serverPort
+            val serverName = NaaradUtils.serverName ?: "raspberrypi"
+            var mySoc: Socket? = null
             var tries = 0
-            while (mySoc == null && tries < 10) {
+            while (tries < 10) {
+                mySoc = NaaradUtils.naaradSocket(serverName, port)
+                if (mySoc != null) break
                 tries++
-                val msg = "Wifi not yet connected..." + tries.toString()
+                val msg = "Connecting to $serverName:$port (try $tries/10)..."
                 NaaradUtils.uiToast(msg, Gravity.BOTTOM)
                 System.err.println(msg)
-                SystemClock.sleep(100)
-                mySoc = NaaradUtils.naaradSocket(NaaradUtils.serverName, NaaradUtils.serverPort)
+                SystemClock.sleep(500)
             }
             if (mySoc == null) NaaradUtils.uiToast(
-                "Wifi not connected after 10 tries" + tries.toString(),
+                "Could not connect to $serverName:$port after 10 tries",
                 Gravity.BOTTOM
             )
             else {

@@ -116,86 +116,53 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
     //-----------------------------------------------------------------------------------------
     //
     fun setSensorValues(jsonStr: String): TextView? {
-        //System.err.println("From NCF: "+jsonStr);
-        var temp: Float
-        var svolt: Float
-        var rssi: Float
-        val nodeid: Int
         try {
             val json = JSONObject(jsonStr)
-            temp = json.getDouble("degc").toFloat()
-
-            // svolt  = (float)json.getDouble("node_v");
-            // rssi   = (float)json.getDouble("node_p");
-            nodeid = json.getInt("node_id")
+            val temp = json.getDouble("degc").toFloat()
+            val nodeid = json.getInt("node_id")
             val bubbleID = mapNodeID2Ndx(nodeid)
+            if (bubbleID < 0 || bubbleID >= tempBubbleArr.size) return null
+            val tv = tempBubbleArr[bubbleID] ?: return null
+            val unit = (tv.getTag(R.integer.key1) as? String) ?: "C"
+            var displayTemp = temp
+            if (unit == "F") displayTemp = displayTemp * 9.0f / 5.0f + 32.0f
 
-
-            // if (nodeid == 1)      bubbleID = 0;
-            // else if (nodeid == 3) bubbleID = 1;
-            val unit = tempBubbleArr[bubbleID]!!.getTag(R.integer.key1) as String?
-            if (unit === "F") temp = temp * 9.0f / 5.0f + 32.0f
-
-            setBubbleValue(nodeid, temp)
-            return tempBubbleArr[bubbleID]
-        } catch (e: JSONException) {
-            //throw new RuntimeException(e);
-            System.err.println(e.message)
+            setBubbleValue(nodeid, displayTemp)
+            return tv
+        } catch (e: Exception) {
+            System.err.println("setSensorValues error: " + e.message)
         }
         return null
     }
 
     fun setBubbleValue(nodeid: Int, temp: Float) {
         class myRunnable : Runnable {
-            var thisID: Int = 0
-            var thisText: String? = null
             var thisTV: TextView
             var tmp: Spanned?
 
-            //tempBubbleArr[thisID].setText(thisText);
-            //myRunnable(int id, String text) 
             constructor(tv: TextView, text: String?) {
                 thisTV = tv
-                thisText = text
-                tmp =
-                    Html.fromHtml("<p><b>" + thisText + "</b><font size =\"50\" color=\"#0066FF\"></font></p>")
-            }
-
-            constructor(tv: TextView, text: Spanned?) {
-                thisTV = tv
-                tmp = text
+                tmp = Html.fromHtml("<p><b>" + text + "</b></p>")
             }
 
             override fun run() {
-                //tempBubbleArr[thisID].setText(thisText);
-                // tempBubbleArr[thisID].setText(tmp);
-                // tempBubbleArr[thisID].setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
-                // tempBubbleArr[0].setTextColor(Color.parseColor("white"));
-
-                thisTV.setText(tmp)
+                thisTV.text = tmp
                 thisTV.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12f)
                 thisTV.setTextColor(Color.parseColor("white"))
             }
         }
 
         val bubbleID = mapNodeID2Ndx(nodeid)
+        if (bubbleID < 0 || bubbleID >= tempBubbleArr.size) return
+        val tv = tempBubbleArr[bubbleID] ?: return
 
-        // int bubbleID=0;
-        // if (nodeid == 1)      bubbleID = 0;
-        // else if (nodeid == 3) bubbleID = 1;
         var text = String.format("%.2f", temp)
-        val unit = tempBubbleArr[bubbleID]!!.getTag(R.integer.key1) as String
+        val unit = (tv.getTag(R.integer.key1) as? String) ?: "C"
         text = text + unit
 
-        tempBubbleArr[bubbleID]!!.setTag(R.integer.key0, temp)
-
-        //tempBubbleArr[bubbleID].setTag(R.integer.key1,unit);
-
-        //Spanned tmp=Html.fromHtml("<p>"+text+"<sup><small>"+unit+"</small></sup></p>");
-        //myRunnable setTVText=new myRunnable(tempBubbleArr[bubbleID],tmp);
-        val setTVText: myRunnable = myRunnable(tempBubbleArr[bubbleID]!!, text)
-
-        tempBubbleArr[bubbleID]!!.post(setTVText)
+        tv.setTag(R.integer.key0, temp)
+        val setTVText = myRunnable(tv, text)
+        tv.post(setTVText)
     }
 
     //
@@ -504,71 +471,28 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
         // If the position of icons was saved earlier, load the
         // position and re-position the icons.
         //
-        val oX: Int
-        val oY: Int
-        var x = -2
-        var y = -2
-        var xMargin = (54 * 480.0 / 600.0).toInt()
-        val yMargin = (24 * 800.0 / 1024.0).toInt()
-        oY = myApp!!.dpToPixel(20)
-        oX = oY //(int)(20*myApp.densityDpi);///160.0);
+        val oY = myApp!!.dpToPixel(20)
+        val oX = oY
 
         for (i in bulbArr.indices) {
-            //Drawable image = getResources().getDrawable(R.id.iv1);
-            //float scale = myApp.metrics.widthPixels / (float) bulbArr[i].getIntrinsicWidth();
-
-            System.err.println("Scale = " + myApp!!.metrics!!.widthPixels)
-
-            x = getPreference("bulbX" + String.format("%d", i), -1)
-            y = getPreference("bulbY" + String.format("%d", i), -1)
-            System.err.println("bulb" + i + " " + x + " " + y)
-            if ((x != -1) && (y != -1)) {
-                // if (i == 1)
-                //     gDnDParams.moveView(ttBulbArr,x-xMargin,y-yMargin,oX,oY,1.0F,1.0F);
-                // else
-                run {
-                    System.err.println(
-                        ("bulb" + i
-                                + " " + (bulbArr[i]!!.parent as View).left // +" "+bulbArr[i].getTotalPaddingRight()
-                                // +" "+bulbArr[i].getTotalPaddingLeft()
-                                // +" "+bulbArr[i].getTotalPaddingTop()
-                                // +" "+bulbArr[i].getTotalPaddingBottom()
-                                // +" "+xPadding
-                                + " " + myApp!!.densityDpi)
-                    )
-                    gDnDParams!!.moveView(bulbArr[i]!!, x - xMargin, y - yMargin, oX, oY, 1.0f, 1.0f)
-                }
+            val bulb = bulbArr[i] ?: continue
+            val x = getPreference("bulbX$i", -1)
+            val y = getPreference("bulbY$i", -1)
+            if (x >= 0 && y >= 0) {
+                gDnDParams?.moveView(bulb, x, y, oX, oY, 1.0f, 1.0f)
             }
         }
-        xMargin = (xMargin * myApp!!.densityDpi).toInt()
+
         for (i in tempBubbleArr.indices) {
-            tempBubbleArr[i]!!.measure(MeasureSpec.UNSPECIFIED, MeasureSpec.UNSPECIFIED)
-            var width = tempBubbleArr[i]!!.measuredWidth
-            var height = tempBubbleArr[i]!!.measuredHeight
-            width = myApp!!.dpToPixel(45) //(int)(45*myApp.densityDpi);
-            height = myApp!!.dpToPixel(25) //(int)(25*myApp.densityDpi);
-            x = getPreference("bubbleX" + String.format("%d", i), -1)
-            y = getPreference("bubbleY" + String.format("%d", i), -1)
-            //int xPadding = 1+tempBubbleArr[i].getTotalPaddingRight()+tempBubbleArr[i].getTotalPaddingLeft();
-            val xPadding =
-                ((1 + tempBubbleArr[i]!!.totalPaddingRight + tempBubbleArr[i]!!.totalPaddingLeft)) //*1.5F/2.0F),
-            val yPadding =
-                ((1 + tempBubbleArr[i]!!.totalPaddingTop + tempBubbleArr[i]!!.totalPaddingBottom)) //*1.5F/2.0F);
-            System.err.println(
-                ("bubble" + i
-                        + " " + tempBubbleArr[i]!!.totalPaddingRight
-                        + " " + tempBubbleArr[i]!!.totalPaddingLeft
-                        + " " + tempBubbleArr[i]!!.totalPaddingTop
-                        + " " + tempBubbleArr[i]!!.totalPaddingBottom
-                        + " " + (tempBubbleArr[i]!!.parent as View).left
-                        + " " + xPadding + " " + yPadding
-                        + " " + myApp!!.densityDpi)
-            )
-            if ((x != -1) && (y != -1)) gDnDParams!!.moveView(
-                tempBubbleArr[i]!!,  //x,y,
-                x - xMargin - xPadding, y - yMargin,  //-xPadding,
-                width, height, 1.0f, 1.0f
-            )
+            val tv = tempBubbleArr[i] ?: continue
+            tv.measure(MeasureSpec.UNSPECIFIED, MeasureSpec.UNSPECIFIED)
+            val width = myApp!!.dpToPixel(45)
+            val height = myApp!!.dpToPixel(25)
+            val x = getPreference("bubbleX$i", -1)
+            val y = getPreference("bubbleY$i", -1)
+            if (x >= 0 && y >= 0) {
+                gDnDParams?.moveView(tv, x, y, width, height, 1.0f, 1.0f)
+            }
         }
 
         // Makes the handles accessed via the global variables
@@ -652,20 +576,51 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
         System.err.println("From NCF::onResume")
     }
 
+    fun saveSingleViewPosition(v: View, x: Int, y: Int) {
+        for (i in bulbArr.indices) {
+            if (bulbArr[i] == v) {
+                setPreference("bulbX$i", x)
+                setPreference("bulbY$i", y)
+                return
+            }
+        }
+        for (i in tempBubbleArr.indices) {
+            if (tempBubbleArr[i] == v) {
+                setPreference("bubbleX$i", x)
+                setPreference("bubbleY$i", y)
+                return
+            }
+        }
+    }
+
+    fun savePositions() {
+        for (i in bulbArr.indices) {
+            val bulb = bulbArr[i] ?: continue
+            val lp = bulb.layoutParams as? MarginLayoutParams
+            val x = lp?.leftMargin ?: bulb.left
+            val y = lp?.topMargin ?: bulb.top
+            if (x >= 0 && y >= 0) {
+                setPreference("bulbX$i", x)
+                setPreference("bulbY$i", y)
+            }
+        }
+        for (i in tempBubbleArr.indices) {
+            val tv = tempBubbleArr[i] ?: continue
+            val lp = tv.layoutParams as? MarginLayoutParams
+            val x = lp?.leftMargin ?: tv.left
+            val y = lp?.topMargin ?: tv.top
+            if (x >= 0 && y >= 0) {
+                setPreference("bubbleX$i", x)
+                setPreference("bubbleY$i", y)
+            }
+        }
+    }
+
     override fun onPause() {
         super.onPause()
         setRetainInstance(true)
         System.err.println("From NCF::onPause")
-        val xf = 1.0
-        val yf = 1.0 //480.0/600.0, yf=800.0/1024.0;
-        for (i in lampArr.indices) {
-            setPreference("bulbX" + String.format("%d", i), (bulbArr[i]!!.right * xf).toInt())
-            setPreference("bulbY" + String.format("%d", i), (bulbArr[i]!!.top * yf).toInt())
-        }
-        for (i in tempBubbleArr.indices) {
-            setPreference("bubbleX" + String.format("%d", i), tempBubbleArr[i]!!.right)
-            setPreference("bubbleY" + String.format("%d", i), tempBubbleArr[i]!!.top)
-        }
+        savePositions()
     }
 
     //

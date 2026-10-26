@@ -166,16 +166,19 @@ class NaaradDnDOnTouchListener(//private View selected_item=null;
                     v.setAlpha(255)
                     v.setBackgroundColor(Color.TRANSPARENT)
                 } else if (v is TextView) {
-                    //System.err.println("setting alpha");
                     v.background.alpha = 100
                 }
 
-                // selected_item.setBackgroundColor(Color.TRANSPARENT);
-                // selected_item=null;
-                System.err.println("Drop pos.: " + v.right + " " + v.top)
-                run {}
-                //SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(context)
-                //setPreference("posx",v.getRight());
+                val lp = v.layoutParams as? android.view.ViewGroup.MarginLayoutParams
+                val left = lp?.leftMargin ?: v.left
+                val top = lp?.topMargin ?: v.top
+                NaaradAbstractFragment.mActivity?.let { activity ->
+                    val fragment = (activity as? androidx.fragment.app.FragmentActivity)?.supportFragmentManager
+                        ?.fragments?.firstOrNull { it is NaaradControlFragment } as? NaaradControlFragment
+                    fragment?.saveSingleViewPosition(v, left, top)
+                }
+
+                System.err.println("Drop pos.: $left $top")
                 myApp.swipeState = true
             }
         }

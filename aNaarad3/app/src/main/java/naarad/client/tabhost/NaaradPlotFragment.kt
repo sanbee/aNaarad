@@ -442,16 +442,21 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
                 nodeid = json.getInt("node_id")
                 x0 = json.getDouble("time")
                 y0 = json.getDouble("degc").toFloat().toDouble()
-                val ndx = nodeID2Ndx?.get(nodeid) ?: 0
-                val series = params[0]?.getSeriesAt(ndx)
-                if (series != null) {
-                    publishProgress(series)
+                val seriesCount = params[0]?.seriesCount ?: 0
+                if (seriesCount > 0) {
+                    val ndx = nodeID2Ndx?.get(nodeid) ?: (Math.abs(nodeid) % seriesCount)
+                    val series = params[0]?.getSeriesAt(ndx)
+                    if (series != null) {
+                        publishProgress(series)
+                    }
                 }
             } else {
                 uiToast("Packet invalid (rf_fail=1)", Gravity.BOTTOM)
                 return
             }
-            mMainActivityCallback!!.onDataArrival(jsonStr)
+            activity?.runOnUiThread {
+                mMainActivityCallback?.onDataArrival(jsonStr)
+            }
         }
 
         //
@@ -526,20 +531,21 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
             getHistory: Boolean
         ) {
             try {
-                // Open the socket connection....
-                var mySoc: Socket?
+                var mySoc: Socket? = null
                 var tries = 0
-                while ((naaradSocket(serverName, serverPort).also { mySoc = it }) == null &&
-                    tries < 10
-                ) {
+                val host = serverName ?: defaultServer ?: "raspberrypi"
+                val port = serverPort
+                while (tries < 10) {
+                    mySoc = naaradSocket(host, port)
+                    if (mySoc != null) break
                     tries++
-                    val msg = "Wifi not yet connected..." + tries.toString()
+                    val msg = "Connecting to $host:$port (try $tries/10)..."
                     uiToast(msg, Gravity.BOTTOM)
                     System.err.println(msg)
-                    SystemClock.sleep(100)
+                    SystemClock.sleep(500)
                 }
                 if (mySoc == null) uiToast(
-                    "Wifi not connected after 10 tries" + tries.toString(),
+                    "Could not connect to $host:$port after 10 tries",
                     Gravity.BOTTOM
                 )
                 else {
@@ -547,10 +553,8 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
                     else naaradGetDataOnlyEngine(keys, params, mySoc)
                 }
             } catch (e: JSONException) {
-                //throw new RuntimeException(e);
                 System.err.println(e.message)
-                uiToast(e.message, Gravity.BOTTOM)
-                //cancel(true);
+                uiToast(e.message ?: "JSONException", Gravity.BOTTOM)
             } catch (e: UnknownHostException) {
                 val msg =
                     "Unknown host: " + serverName + ":" + serverPort.toString() + "\nCheck settings"
@@ -672,15 +676,12 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
                 nConnected = true
                 val keys: IntArray = getKeysAsArray(nodeID2Ndx!!)
 
-                //thisSeries = params[0].getSeriesAt(0);
-
-                // System.err.println("########");
-                // System.err.println("TEMP. DISABLING HISTROCICAL DATA COLLECTION!!!");
-                // System.err.println("########");
-                naaradGetData(keys!!, params, true)
-                while (true && !allDone) {
-                    naaradGetData(keys, params, false)
-                    SystemClock.sleep(60000)
+                naaradGetData(keys, params, true)
+                while (!allDone) {
+                    SystemClock.sleep(5000)
+                    if (!allDone) {
+                        naaradGetData(keys, params, false)
+                    }
                 }
             }
 
@@ -691,70 +692,31 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
         //--------------------------------------------------------------------------
         //    
         fun addNewData(thisSeries: XYSeries, x: Double, y: Double) {
-            val xMax: Double
-            val xMin: Double
-            var dX = 0.0
-            val dT = 1000.0 * 60 * 60 * 12
-            val n: Int
+            if (y == MathHelper.NULL_VALUE) return
 
-            //mRenderer.setXAxisMax(x+360000.0);	    
-            // xMax = thisSeries.getMaxX();
-            // xMin = thisSeries.getMinX();
-            // if (x > xMax) xMax = x;
-            // if (x < xMin)) xMin = x;
-            n = thisSeries.itemCount
-            if ((n > 0)) {
-                //		    if ((thisSeries.getX(n-1)-x) >= 300000)
-                if ((thisSeries.getX(n - 1) - x) >= 120000) thisSeries.add(x, y)
-                else {
-                    if (y != MathHelper.NULL_VALUE) {
-                        var thisY = y
-                        val dY: Double = Math.abs(thisY - thisSeries.getY(n - 1))
-                        if (dY < 0.5) thisY = (thisY + thisSeries.getY(n - 1)) / 2.0
-                        //if (y != thisSeries.getY(n-1))
-                        if (thisY != thisSeries.getY(n - 1)) {
-                            run {
-                                if (thisY > yMax) yMax = thisY
-                                if (thisY < yMin) yMin = thisY
-                            }
-                            //System.err.println("Val: "+y+" "+yMax+" "+yMin);
-                            thisSeries.add(x, thisY)
-                        }
-                    }
-                }
-            } else thisSeries.add(x, y)
-            if (n > 0) {
-                xMax = thisSeries.getX(n - 1)
-                xMin = thisSeries.getX(0)
-                dX = xMax - xMin
-                Log.i(
-                    "xrange0",
-                    xMax.toString() + " " + xMin.toString() + " " + dX.toString() + " " + n.toString()
-                )
+            if (yMax == 0.0 || y > yMax) yMax = y
+            if (yMin == 100.0 || y < yMin) yMin = y
+
+            thisSeries.add(x, y)
+
+            val n = thisSeries.itemCount
+            if (n > 1) {
+                val xMaxVal = thisSeries.getX(n - 1)
+                val xMinVal = thisSeries.getX(0)
+                val dX = xMaxVal - xMinVal
+                val dT = 1000.0 * 60 * 60 * 12 // 12 hours
                 if (dX > dT) thisSeries.remove(0)
             }
-
-
-            // if (dX > dT)
-            // 	{
-            // 	    xMax = mCurrentSeries.getX(n-1);
-            // 	    xMin = mCurrentSeries.getX(0);
-            // 	    dX=xMax-xMin;
-            // 	    Log.i("xrange1",Double.toString(xMax)+" "+Double.toString(xMin)+" "+Double.toString(dX)+" "+Integer.toString(n));
-            // 	}
         }
 
-        //
-        //--------------------------------------------------------------------------
-        //    
         protected fun reDraw() {
-            if (doReDraw) if ((mTimeChartView != null) && (stopRecording == false)) {
-                mTimeChartView!!.zoomReset()
-                mRenderer.yAxisMax = yMax + 0.2
-                mRenderer.yAxisMin = yMin - 0.2
-                // mRenderer.setYAxisMax(40.0);
-                // mRenderer.setYAxisMin(-10.0);
-                mTimeChartView!!.repaint()
+            if (doReDraw && mTimeChartView != null && !stopRecording) {
+                activity?.runOnUiThread {
+                    mTimeChartView?.zoomReset()
+                    mRenderer.yAxisMax = if (yMax > yMin) yMax + 0.5 else yMax + 2.0
+                    mRenderer.yAxisMin = if (yMax > yMin) yMin - 0.5 else yMin - 2.0
+                    mTimeChartView?.repaint()
+                }
             }
         }
 

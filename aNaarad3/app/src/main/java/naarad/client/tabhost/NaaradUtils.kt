@@ -268,20 +268,14 @@ object NaaradUtils {
         socWriter.flush()
     }
 
-    @Throws(IOException::class, UnknownHostException::class)
     fun naaradSocket(hostName: String?, port: Int): Socket? {
-        val clientSoc = Socket(hostName, port)
-
-
-        // int attempts = 0;
-        // if (!clientSoc.isConnected() && attempts < 10)
-        //     {
-        // 	SystemClock.sleep(10);
-        // 	attempts++;
-        //     }
-        // else
-        //     throw(new IOException("Naarad could not connection socket: \""+hostName+"\":"+port));
-        if (clientSoc.isConnected) return clientSoc
-        else return null
+        if (hostName.isNullOrEmpty() || port <= 0) return null
+        return try {
+            val clientSoc = Socket()
+            clientSoc.connect(java.net.InetSocketAddress(hostName, port), 2000)
+            if (clientSoc.isConnected) clientSoc else null
+        } catch (e: Exception) {
+            null
+        }
     }
 }
