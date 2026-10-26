@@ -13,6 +13,7 @@ import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
+import android.view.View.MeasureSpec
 import android.view.View.OnTouchListener
 import android.view.ViewGroup
 import android.view.ViewGroup.MarginLayoutParams
@@ -274,12 +275,10 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
         override fun onSingleTapUp(e: MotionEvent): Boolean {
             super.onSingleTapUp(e)
             tempInDegC = !tempInDegC
-            // if (tempInDegC) toast("Temp. in degC");
-            // else toast("Temp. in F");
-            var tt = (gDnDParams!!.selected_item.getTag(R.integer.key0) as Number).toFloat()
-            var unit = gDnDParams!!.selected_item.getTag(R.integer.key1) as String?
-            val nodeid = gDnDParams!!.selected_item.getTag() as Int
-            //System.err.println("T: "+tt+unit+nodeid);
+            val selItem = gDnDParams!!.selected_item!!
+            var tt = (selItem.getTag(R.integer.key0) as Number).toFloat()
+            var unit = selItem.getTag(R.integer.key1) as String?
+            val nodeid = selItem.getTag() as Int
             if (unit === "C") {
                 tt = tt * 9.0f / 5.0f + 32.0f
                 unit = "F"
@@ -287,38 +286,24 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
                 tt = (tt - 32.0f) * 5.0f / 9.0f
                 unit = "C"
             }
-            gDnDParams!!.selected_item.setTag(R.integer.key1, unit)
-            // if (!tempInDegC) 
-            // 	tt = tt * 9.0F/5.0F + 32.0F;
-            //     //temp = temp * 9.0F/5.0F + 32.0F;
-            // else
-            // 	tt = (tt-32.0f)*5.0f/9.0f;
+            selItem.setTag(R.integer.key1, unit)
             setBubbleValue(nodeid, tt)
 
             return false
         }
 
         override fun onLongPress(e: MotionEvent) {
-            // Log.i("Gesture: ","LongPress");
             super.onLongPress(e)
             toast("DnD activated", Gravity.TOP or Gravity.RIGHT)
 
+            val selItem = gDnDParams!!.selected_item!!
             gDnDParams!!.touchFlag_p = true
-            //((TextView)gDnDParams.selected_item).setAlpha(100);
-            //gDnDParams.selected_item.setBackgroundColor(Color.GREEN);
-            gDnDParams!!.selected_item.getBackground().setAlpha(80)
+            selItem.getBackground()?.setAlpha(80)
 
             myApp!!.swipeState = false
 
             gDnDParams!!.longPress_x = e.getX().toInt()
             gDnDParams!!.longPress_y = e.getY().toInt()
-
-            // int[] loc = new int[2];
-            // gDnDParams.selected_item.getLocationOnScreen(loc);
-            // System.err.println("On screen (x,y): "
-            // 		       +loc[0]+" "+loc[1]+" "
-            // 		       +gDnDParams.selected_item.getRight()+" "+gDnDParams.selected_item.getTop()+" "
-            // 		       +gDnDParams.longPress_x+" "+gDnDParams.longPress_y);
             return
         }
     }
@@ -329,66 +314,40 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
     //
     var myGestureListener
             : SimpleOnGestureListener = object : SimpleOnGestureListener() {
-        //
-        // onSingleTap() on the lamp icons recreates the same
-        // operation as click on the associated ToggleButtons.
-        //
         override fun onSingleTapUp(e: MotionEvent): Boolean {
             super.onSingleTapUp(e)
-            //		Log.i("Gesture: ","TapUp");
-            val tag = (gDnDParams!!.selected_item.getTag(R.integer.key0)) as Int
-            //Log.i("Tag: ",Integer.toString(tag));//R.integer.key0);
+            val selItem = gDnDParams!!.selected_item!!
+            val tag = (selItem.getTag(R.integer.key0)) as Int
             val on = lampArr[tag]!!.isChecked()
-            setBulbBG(gDnDParams!!.selected_item!!, on)
+            setBulbBG(selItem, on)
             lampArr[tag]!!.setChecked(!on)
             lampHandler0(lampArr[tag]!!)
             return false
         }
 
-        //
-        // onLongPress() sets up the global variables used for the
-        // MOVE operation (touchFlag_p, selected_item and
-        // longPress_{x,y}) and disables the swiping of the
-        // Fragements.
-        //
         override fun onLongPress(e: MotionEvent) {
-            // Log.i("Gesture: ","LongPress");
             toast("DnD activated", Gravity.TOP or Gravity.RIGHT)
             super.onLongPress(e)
+            val selItem = gDnDParams!!.selected_item!!
             gDnDParams!!.touchFlag_p = true
-            // ttbulb -- uncomment the following line when not using ttbulb
-            (gDnDParams!!.selected_item as ImageView).setAlpha(100)
+            (selItem as ImageView).setAlpha(100)
 
-            gDnDParams!!.selected_item.setBackgroundColor(Color.GREEN)
-            gDnDParams!!.selected_item.getBackground().setAlpha(100)
+            selItem.setBackgroundColor(Color.GREEN)
+            selItem.getBackground()?.setAlpha(100)
 
-            //resizeView(selected_item, e, 50, 50);
-            //mViewPager = ((MyViewPager)mActivity0.findViewById(R.id.viewpager));
-            //mViewPager.enableSwipe(false);
-            //mViewPager.enableSwipe(false);
             myApp!!.swipeState = false
-            // Location of the long press event on the screen (in
-            // the co-ordinate system of the Fragment display area
-            // -- i.e. minus any area of the screen occupied by
-            // the Tabs etc.).
-            //
-            // These co-ordinates are relative to the co-ordinate
-            // system of the View on which the LongPress was
-            // detected.  Therefore these need not be reset in the
-            // MOVE event handler.
             gDnDParams!!.longPress_x = e.getX().toInt()
             gDnDParams!!.longPress_y = e.getY().toInt()
 
             val loc = IntArray(2)
-            gDnDParams!!.selected_item.getLocationOnScreen(loc)
+            selItem.getLocationOnScreen(loc)
             System.err.println(
                 ("On screen (x,y): "
                         + loc[0] + " " + loc[1] + " "
-                        + gDnDParams!!.selected_item.getRight() + " " + gDnDParams!!.selected_item.getTop() + " "
+                        + selItem.getRight() + " " + selItem.getTop() + " "
                         + gDnDParams!!.longPress_x + " " + gDnDParams!!.longPress_y)
             )
 
-            //containerOnTouch(selected_item, e, touchFlag_p);
             return
         }
     }
@@ -457,9 +416,9 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
         // Set up the handlers for events on the toggle buttons
         // (Single click).
         for (i in lampArr.indices) {
-            lampArr[i].setTag(i.toString())
-            lampArr[i].setOnClickListener(lampHandler)
-            setLampBG(lampArr[i])
+            lampArr[i]?.setTag(i.toString())
+            lampArr[i]?.setOnClickListener(lampHandler)
+            lampArr[i]?.let { setLampBG(it) }
         }
 
         // Set up the handlers to handle gestures (SingleTap,
@@ -575,7 +534,7 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
                                 // +" "+xPadding
                                 + " " + myApp!!.densityDpi)
                     )
-                    gDnDParams!!.moveView(bulbArr[i], x - xMargin, y - yMargin, oX, oY, 1.0f, 1.0f)
+                    gDnDParams!!.moveView(bulbArr[i]!!, x - xMargin, y - yMargin, oX, oY, 1.0f, 1.0f)
                 }
             }
         }
@@ -604,7 +563,7 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
                         + " " + myApp!!.densityDpi)
             )
             if ((x != -1) && (y != -1)) gDnDParams!!.moveView(
-                tempBubbleArr[i],  //x,y,
+                tempBubbleArr[i]!!,  //x,y,
                 x - xMargin - xPadding, y - yMargin,  //-xPadding,
                 width, height, 1.0f, 1.0f
             )
@@ -629,7 +588,7 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
         savedInstanceState: Bundle?
     ): View {
         super.onCreateView(inflater, container, savedInstanceState)
-        myApp = getActivity().getApplication() as NaaradApp
+        myApp = requireActivity().application as NaaradApp
 
         //Log.i("dpi: ",Integer.toString(myApp.densityDpi));
         setRetainInstance(true)
@@ -764,11 +723,13 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
             if (result !== ALL_WELL) {
                 //Toast.makeText(mActivity0, result, Toast.LENGTH_SHORT).show();
                 toast(result, Gravity.TOP or Gravity.RIGHT)
-                val on = currentToggleButton.isChecked()
-                val tag = (currentToggleButton.getTag() as String?)!!.toInt()
+                currentToggleButton?.let { btn ->
+                    val on = btn.isChecked()
+                    val tag = (btn.getTag() as String?)!!.toInt()
 
-                currentToggleButton.setChecked(!on)
-                setBulbBG(bulbArr[tag]!!, on)
+                    btn.setChecked(!on)
+                    setBulbBG(bulbArr[tag]!!, on)
+                }
             }
         }
     }

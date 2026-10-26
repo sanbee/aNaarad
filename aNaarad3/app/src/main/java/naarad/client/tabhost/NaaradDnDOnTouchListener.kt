@@ -32,13 +32,11 @@ class NaaradDnDOnTouchListener(//private View selected_item=null;
     // Construct with GestureDetector, the global DnDParameters object
     // and the global app object.
     init {
-        gDnDParams = gDnDParams
         myApp = thisApp
         myWidthFudgeFactor = thisWidthFudgeFactor
         myHeightFudgeFactor = thisHeightFudgeFactor
         mySizeXDP = sizeXDP
         mySizeYDP = sizeYDP
-        //gGestureDetector = new GestureDetector(mActivity0, myGestureListener);
     }
 
     fun containerOnTouch(v: View?, event: MotionEvent, touchFlag_l: Boolean): Boolean {
@@ -75,16 +73,16 @@ class NaaradDnDOnTouchListener(//private View selected_item=null;
             //System.err.println("Display If  Part ::->"+touchFlag_l);
             when (event.getActionMasked()) {
                 MotionEvent.ACTION_MOVE -> {
-                    val x: Int
-                    val y: Int
+                    var x: Int
+                    var y: Int
                     val pX: Int
                     val pY: Int
-                    val oX = 0
-                    val oY = 0
+                    var oX = 0
+                    var oY = 0
                     val iX: Int
                     val iY: Int
-                    val dx: Int
-                    val dy: Int
+                    var dx: Int
+                    var dy: Int
                     pX = event.getX().toInt()
                     pY = event.getY().toInt()
 

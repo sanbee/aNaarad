@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="naarad.client.tabhost">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!-- Network and Wake system permissions remain fully valid on modern Android -->
     <uses-permission android:name="android.permission.INTERNET" />
@@ -11,7 +10,7 @@
     <!-- Note: Old <uses-sdk /> tag is removed because it is now managed via your build.gradle.kts file -->
 
     <application
-        android:name=".NaaradApp"
+        android:name="naarad.client.tabhost.NaaradApp"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
@@ -20,7 +19,7 @@
         
         <!-- CRITICAL FIX: Added android:exported="true" so Android 12+ can launch it -->
         <activity
-            android:name=".MainActivity"
+            android:name="naarad.client.tabhost.MainActivity"
             android:label="@string/app_name"
             android:configChanges="orientation|keyboardHidden|screenSize"
             android:exported="true">
@@ -28,19 +27,6 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity>
-        
-        <!-- Standard internal activities do not need intent filters and should be hidden from external apps -->
-        <activity
-            android:name=".MyPageAdapter"
-            android:label="@string/title_activity_my_page_adapter"
-            android:exported="false">
-        </activity>
-        
-        <activity
-            android:name=".NaaradControlFragment"
-            android:label="@string/title_activity_my_sample_fragment"
-            android:exported="false">
         </activity>
         
     </application>

@@ -3,18 +3,34 @@ package naarad.client.tabhost
 // import java.util.Calendar;
 // import java.util.TimeZone;
 //import android.widget.TabHost;
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
+import android.os.AsyncTask
 import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
+import android.util.DisplayMetrics
 import android.util.Log
 import android.util.TypedValue
+import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.EditText
+import android.widget.LinearLayout
+import com.sanbee.anaarad.R
+import org.achartengine.ChartFactory
+import org.achartengine.GraphicalView
+import org.achartengine.chart.PointStyle
+import org.achartengine.model.XYMultipleSeriesDataset
+import org.achartengine.model.XYSeries
+import org.achartengine.renderer.XYMultipleSeriesRenderer
+import org.achartengine.renderer.XYSeriesRenderer
+import org.achartengine.util.MathHelper
+import org.json.JSONException
 import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.IOException
@@ -278,21 +294,20 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
     private fun initMultiRenderer(multiRenderer: XYMultipleSeriesRenderer?) {
         mRenderer.setApplyBackgroundColor(true)
         mRenderer.setBackgroundColor(Color.argb(100, 50, 50, 50))
-        mRenderer.setAxisTitleTextSize(10)
-        mRenderer.setChartTitleTextSize(10)
-        mRenderer.setLabelsTextSize(10)
-        mRenderer.setLegendTextSize(10)
+        mRenderer.setAxisTitleTextSize(10f)
+        mRenderer.setChartTitleTextSize(10f)
+        mRenderer.setLabelsTextSize(10f)
+        mRenderer.setLegendTextSize(10f)
         mRenderer.setMargins(intArrayOf(2, 20, 5, 2)) //Top, Left, Bottom, Right
         mRenderer.setZoomButtonsVisible(false)
-        mRenderer.setPointSize(2)
+        mRenderer.setPointSize(2f)
         mRenderer.setXTitle("")
         mRenderer.setYTitle("Temperature")
         mRenderer.setShowGrid(true)
         mRenderer.setShowLegend(false)
-        //mRenderer.setShowLegend(true);
         mRenderer.setXLabels(10) // No. of xtics
         mRenderer.setClickEnabled(false)
-        mRenderer.setPanEnabled(false)
+        mRenderer.setPanEnabled(false, false)
         //multiRenderer.setMarginsColor(Color.argb(0x00, 0xff, 0x00, 0x00));
         val metrics: DisplayMetrics? = getResources().getDisplayMetrics()
         var `val` = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 12f, metrics)
@@ -349,15 +364,10 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
             //re-used, it has to be construction afresh.  if
             //(mSensorDataSource == null)
 
-            mSensorDataSource = NaaradPlotFragment.SensorDataSource()
+            mSensorDataSource = SensorDataSource()
 
-            //mSensorDataSource = new SensorDataSourceSim();
-
-            //----------------Use this code -------------------------
-            // if (apiLevel <= 9) mSensorDataSource.execute(mDataset.getSeriesAt(0));
-            // else               mSensorDataSource.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,mDataset.getSeriesAt(0));
-            if (apiLevel <= 9) mSensorDataSource.execute(mDataset)
-            else mSensorDataSource.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, mDataset)
+            if (apiLevel <= 9) mSensorDataSource?.execute(mDataset)
+            else mSensorDataSource?.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, mDataset)
             //----------------Use this code -------------------------
         }
     }
@@ -409,7 +419,7 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
         @Throws(JSONException::class)
         private fun publishJSON(
             jsonTokens: Array<String?>,
-            params: Array<XYMultipleSeriesDataset?>
+            params: Array<out XYMultipleSeriesDataset?>
         ) {
             var jsonStr: String? = ""
             for (j in 1..2) jsonStr += jsonTokens[j]
@@ -419,15 +429,14 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
             val json = JSONObject(jsonStr)
             if (json.getInt("rf_fail") == 0)  // Indicates that the packet is valid
             {
-                // svolt  = (float)json.getDouble("node_v");
-                // rssi   = (float)json.getDouble("node_p");
                 nodeid = json.getInt("node_id")
-                //x0 =  new Date().getTime();
                 x0 = json.getDouble("time")
-                //double tt=new Date().getTime();
-                //System.err.println(tt+" "+x0+" "+(tt-x0));
                 y0 = json.getDouble("degc").toFloat().toDouble()
-                publishProgress(params[0].getSeriesAt(nodeID2Ndx!!.get(nodeid)))
+                val ndx = nodeID2Ndx?.get(nodeid) ?: 0
+                val series = params[0]?.getSeriesAt(ndx)
+                if (series != null) {
+                    publishProgress(series)
+                }
             } else {
                 uiToast("Packet invalid (rf_fail=1)", Gravity.BOTTOM)
                 return
@@ -441,7 +450,7 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
         @Throws(IOException::class, JSONException::class)
         private fun naaradGetDataHistoryEngine(
             keys: IntArray,
-            params: Array<XYMultipleSeriesDataset?>,
+            params: Array<out XYMultipleSeriesDataset?>,
             mySoc: Socket
         ) {
             val mySocWriter = PrintWriter(mySoc.getOutputStream(), true)
@@ -449,14 +458,9 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
             naaradWriter(mySocWriter, "SensorDataSync")
 
             for (i in keys.indices) {
-                //String msg=mkMessage("getcpkt "+Integer.toString(tt[i]));
                 val msg = ("gethpkt " + keys[i].toString())
-
-
-                //System.err.println("Sending: "+msg);
                 naaradWriter(mySocWriter, msg)
                 SystemClock.sleep(100)
-                //System.err.println("Receiving...");
                 var message: String? = ""
                 var msgData: String? = ""
                 doReDraw = false
@@ -464,55 +468,38 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
                     if ((naaradReader(mySocReader).also {
                             message = it
                         }) == null) throw (JSONException("JSON message is null"))
-                    //SystemClock.sleep(100);
                     val tokens: Array<String?> =
                         message!!.split(" ".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
                     msgData = tokens[1]!!.trim { it <= ' ' }
-                    //System.err.println("Got: "+message+" \""+msgData+"\""+(msgData.equals("PHINISHED")));
                     if (msgData != "PHINISHED") publishJSON(tokens, params)
                 }
                 doReDraw = true
                 reDraw()
-                //System.err.println("Got all");
             }
             naaradWriter(mySocWriter, "done")
             mySoc.close()
             doReDraw = true
         }
 
-        //
-        //----------------------------------------------------------------------------------------------
-        //
         @Throws(IOException::class, JSONException::class)
         private fun naaradGetDataOnlyEngine(
             keys: IntArray,
-            params: Array<XYMultipleSeriesDataset?>,
+            params: Array<out XYMultipleSeriesDataset?>,
             mySoc: Socket
         ) {
-            //throw(new IOException("Wifi not connected after 10 tries"));
-            //Socket mySoc = new Socket(getServerName(), getServerPort());
-            //SystemClock.sleep(500);
             val mySocWriter = PrintWriter(mySoc.getOutputStream(), true)
             val mySocReader = BufferedReader(InputStreamReader(mySoc.getInputStream()), 100)
             naaradWriter(mySocWriter, "SensorDataSync")
 
             for (i in keys.indices) {
-                //String msg=mkMessage("getcpkt "+Integer.toString(tt[i]));
                 val msg = ("getcpkt " + keys[i].toString())
                 var message = ""
-
-
-                //System.err.println("Sending: "+msg);
                 naaradWriter(mySocWriter, msg)
                 SystemClock.sleep(100)
-                //System.err.println("Receiving...");
                 if ((naaradReader(mySocReader).also {
                         message = it!!
                     }) == null) throw (JSONException("JSON message is null"))
 
-                //System.err.println("Got: "+message);
-
-                //======================================================
                 val tokens: Array<String?> =
                     message.split(" ".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
                 var jsonStr: String? = ""
@@ -520,17 +507,12 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
                 publishJSON(tokens, params)
             }
 
-
-            //...close the socket.
             naaradWriter(mySocWriter, "done")
             mySoc.close()
         }
 
-        //
-        //----------------------------------------------------------------------------------------------
-        //
         private fun naaradGetData(
-            keys: IntArray, params: Array<XYMultipleSeriesDataset?>,
+            keys: IntArray, params: Array<out XYMultipleSeriesDataset?>,
             getHistory: Boolean
         ) {
             try {
@@ -687,7 +669,6 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
                 // System.err.println("########");
                 naaradGetData(keys!!, params, true)
                 while (true && !allDone) {
-                    //naaradGetDataOnly(keys,params);
                     naaradGetData(keys, params, false)
                     SystemClock.sleep(60000)
                 }
@@ -773,12 +754,9 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
         //	@Override protected void onProgressUpdate(Integer... values) 
         override fun onProgressUpdate(vararg values: XYSeries?) {
             super.onProgressUpdate(*values)
-
-
-            //mCurrentSeries.add(x, y);
-            //addNewData(mCurrentSeries,x0,y0);
-            //		Log.i("onProg: ",seriesTitle+Integer.toString(values[0].getItemCount()));
-            addNewData(values[0], x0, y0)
+            values[0]?.let {
+                addNewData(it, x0, y0)
+            }
             reDraw()
 
 
