@@ -58,8 +58,8 @@ object NaaradUtils {
         return prefs?.getString(name, defValue) ?: defValue
     }
 
-    fun getServerName(): String? = serverName
-    fun getServerPort(): Int = serverPort
+    // fun getServerName(): String? = serverName
+    // fun getServerPort(): Int = serverPort
 
     var serverName: String?
         get() {
@@ -133,7 +133,7 @@ object NaaradUtils {
             // However it is not allowed to be added twice even if the parent is same.
             // So we must remove root View (nView) from the existing parent view group
             // (it will be added back).
-            (v.getParent() as ViewGroup).removeView(v)
+            (v.parent as ViewGroup).removeView(v)
             return true
         } else return false
     }
@@ -175,7 +175,7 @@ object NaaradUtils {
     // UI thread.
     //
     fun uiToast(msg: String?, gravity: Int) {
-        class ToastOnUIThread internal constructor(var thisText: String?, var thisGravity: Int) :
+        class ToastOnUIThread(var thisText: String?, var thisGravity: Int) :
             Runnable {
             override fun run() {
                 toast(thisText, thisGravity)
@@ -281,7 +281,7 @@ object NaaradUtils {
         //     }
         // else
         //     throw(new IOException("Naarad could not connection socket: \""+hostName+"\":"+port));
-        if (clientSoc.isConnected()) return clientSoc
+        if (clientSoc.isConnected) return clientSoc
         else return null
     }
 }

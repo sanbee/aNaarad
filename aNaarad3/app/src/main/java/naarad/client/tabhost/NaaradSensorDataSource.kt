@@ -125,7 +125,9 @@ class NaaradSensorDataSource(
         getHistory: Boolean
     ) {
         try {
-            var mySoc: Socket? = NaaradUtils.naaradSocket(NaaradUtils.getServerName(), NaaradUtils.getServerPort())
+	    var port=NaaradUtils.serverPort
+	    var serverName=NaaradUtils.serverName
+            var mySoc: Socket? = NaaradUtils.naaradSocket(serverName, port)
             var tries = 0
             while (mySoc == null && tries < 10) {
                 tries++
@@ -133,7 +135,7 @@ class NaaradSensorDataSource(
                 NaaradUtils.uiToast(msg, Gravity.BOTTOM)
                 System.err.println(msg)
                 SystemClock.sleep(100)
-                mySoc = NaaradUtils.naaradSocket(NaaradUtils.getServerName(), NaaradUtils.getServerPort())
+                mySoc = NaaradUtils.naaradSocket(NaaradUtils.serverName, NaaradUtils.serverPort)
             }
             if (mySoc == null) NaaradUtils.uiToast(
                 "Wifi not connected after 10 tries" + tries.toString(),
@@ -148,12 +150,12 @@ class NaaradSensorDataSource(
             NaaradUtils.uiToast(e.message ?: "JSONException", Gravity.BOTTOM)
         } catch (e: UnknownHostException) {
             val msg =
-                "Unknown host: " + NaaradUtils.getServerName() + ":" + NaaradUtils.getServerPort()
+                "Unknown host: " + NaaradUtils.serverName + ":" + NaaradUtils.serverPort
                     .toString() + "\nCheck settings"
             NaaradUtils.uiToast(msg, Gravity.BOTTOM)
         } catch (e: IOException) {
             val msg =
-                "Error connecting to " + NaaradUtils.getServerName() + ":" + NaaradUtils.getServerPort()
+                "Error connecting to " + NaaradUtils.serverName + ":" + NaaradUtils.serverPort
                     .toString() + "\nCheck settings"
             NaaradUtils.uiToast(msg, Gravity.BOTTOM)
         }
@@ -172,7 +174,7 @@ class NaaradSensorDataSource(
         val xMinVal: Double
         var dX = 0.0
         val dT = 1000.0 * 60 * 60 * 12
-        val n: Int = thisSeries.getItemCount()
+        val n: Int = thisSeries.itemCount
         if (n > 0) {
             if ((thisSeries.getX(n - 1) - x) >= 300000) thisSeries.add(x, y)
             else {
@@ -200,8 +202,8 @@ class NaaradSensorDataSource(
     protected fun reDraw() {
         if (doReDraw && (mTimeChartView != null) && (!stopRecording)) {
             mTimeChartView?.zoomReset()
-            mRenderer?.setYAxisMax(yMax + 0.2)
-            mRenderer?.setYAxisMin(yMin - 0.2)
+            mRenderer?.yAxisMax = yMax + 0.2
+            mRenderer?.yAxisMin = yMin - 0.2
             mTimeChartView?.repaint()
         }
     }

@@ -30,7 +30,7 @@ class NaaradSettingFragment : NaaradAbstractFragment() {
     private var gServerPort = 0
     private var gServerName: String? = null
 
-    public override fun onPause() {
+    override fun onPause() {
         super.onPause()
         var giveMsg = false
         if (myApp?.myWakeLock?.isHeld == true) {
@@ -92,7 +92,7 @@ class NaaradSettingFragment : NaaradAbstractFragment() {
         }
     }
 
-    public override fun onCreateView(
+    override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {

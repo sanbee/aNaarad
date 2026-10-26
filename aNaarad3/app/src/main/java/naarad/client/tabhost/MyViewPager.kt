@@ -4,14 +4,14 @@ import android.view.MotionEvent
 import androidx.viewpager.widget.ViewPager
 
 class MyViewPager : ViewPager {
-    private var enabled: kotlin.Boolean
+    private var enabled: Boolean
     private val myApp: NaaradApp
 
     constructor(
         context: android.content.Context,
         attrs: android.util.AttributeSet?
     ) : super(context, attrs) {
-        myApp = context.getApplicationContext() as NaaradApp
+        myApp = context.applicationContext as NaaradApp
         this.enabled = true
 
         // Keep all the three fragments in memory.  
@@ -19,22 +19,20 @@ class MyViewPager : ViewPager {
     }
 
     constructor(context: android.content.Context) : super(context) {
-        myApp = context.getApplicationContext() as NaaradApp
+        myApp = context.applicationContext as NaaradApp
         this.enabled = false
     }
 
-    fun enableSwipe(enable: kotlin.Boolean) {
+    fun enableSwipe(enable: Boolean) {
         this.enabled = enable
     }
 
-    public override fun onTouchEvent(event: MotionEvent?): kotlin.Boolean {
+    override fun onTouchEvent(event: MotionEvent?): Boolean {
         //if (this.enabled) 
-        if (myApp.swipeState) return super.onTouchEvent(event)
-
-        return false
+        return myApp.swipeState && super.onTouchEvent(event)
     }
 
-    public override fun onInterceptTouchEvent(event: MotionEvent?): kotlin.Boolean {
+    override fun onInterceptTouchEvent(event: MotionEvent?): Boolean {
         // if (myApp == null) Log.i("intercept: ", "app is null");
         // else
         //     if (myApp.getSwipeState()) Log.i("intercept:"," on");
@@ -42,12 +40,10 @@ class MyViewPager : ViewPager {
 
         //if (this.enabled) 
 
-        if (myApp.swipeState) return super.onInterceptTouchEvent(event)
-
-        return false
+        return myApp.swipeState && super.onInterceptTouchEvent(event)
     }
 
-    fun setPagingEnabled(enabled: kotlin.Boolean) {
+    fun setPagingEnabled(enabled: Boolean) {
         this.enabled = enabled
     }
 }

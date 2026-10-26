@@ -23,7 +23,7 @@ class NaaradApp : Application() {
 
     fun setWifiState(turnON: Boolean) {
         myWifiManager = getSystemService(WIFI_SERVICE) as WifiManager?
-        myWifiManager!!.setWifiEnabled(turnON)
+        myWifiManager!!.isWifiEnabled = turnON
     }
 
     fun makeLocks() {
@@ -42,7 +42,7 @@ class NaaradApp : Application() {
 
         val mgr = getSystemService(WINDOW_SERVICE) as WindowManager
         metrics = DisplayMetrics()
-        mgr.getDefaultDisplay().getMetrics(metrics)
+        mgr.defaultDisplay.getMetrics(metrics)
 
 
         // Drawable image = getResources().getDrawable(R.drawables.someImage);
@@ -51,7 +51,7 @@ class NaaradApp : Application() {
 
         //DisplayMetrics dm = getResources().getDisplayMetrics(); 
         //densityDpi = dm.densityDpi;
-        densityDpi = getResources().getDisplayMetrics().density
+        densityDpi = resources.displayMetrics.density
 
         this.swipeState = true
         makeLocks()

@@ -30,40 +30,40 @@ class NaaradPlotter(metrics: DisplayMetrics?) {
     private val myMetrics: DisplayMetrics? = metrics
 
     fun makeSeries(color: Int) {
-        val seriesTitle = "Series " + (mDataset.getSeriesCount() + 1)
+        val seriesTitle = "Series " + (mDataset.seriesCount + 1)
         val series0 = XYSeries(seriesTitle)
         mDataset.addSeries(series0)
         val renderer0 = XYSeriesRenderer()
-        renderer0.setPointStyle(PointStyle.CIRCLE)
-        renderer0.setFillPoints(true)
-        renderer0.setLineWidth(2f)
-        renderer0.setColor(color)
+        renderer0.pointStyle = PointStyle.CIRCLE
+        renderer0.isFillPoints = true
+        renderer0.lineWidth = 2f
+        renderer0.color = color
         mRenderer.addSeriesRenderer(renderer0)
     }
 
     fun initMultiRenderer() {
-        mRenderer.setApplyBackgroundColor(true)
-        mRenderer.setBackgroundColor(Color.argb(100, 50, 50, 50))
-        mRenderer.setAxisTitleTextSize(10f)
-        mRenderer.setChartTitleTextSize(10f)
-        mRenderer.setLabelsTextSize(10f)
-        mRenderer.setLegendTextSize(10f)
-        mRenderer.setMargins(intArrayOf(2, 20, 5, 2)) //Top, Left, Bottom, Right
-        mRenderer.setZoomButtonsVisible(false)
-        mRenderer.setPointSize(2f)
-        mRenderer.setXTitle("")
-        mRenderer.setYTitle("Temperature")
+        mRenderer.isApplyBackgroundColor = true
+        mRenderer.backgroundColor = Color.argb(100, 50, 50, 50)
+        mRenderer.axisTitleTextSize = 10f
+        mRenderer.chartTitleTextSize = 10f
+        mRenderer.labelsTextSize = 10f
+        mRenderer.legendTextSize = 10f
+        mRenderer.margins = intArrayOf(2, 20, 5, 2) //Top, Left, Bottom, Right
+        mRenderer.isZoomButtonsVisible = false
+        mRenderer.pointSize = 2f
+        mRenderer.xTitle = ""
+        mRenderer.yTitle = "Temperature"
         mRenderer.setShowGrid(true)
-        mRenderer.setShowLegend(false)
-        mRenderer.setXLabels(10) // No. of xtics
-        mRenderer.setClickEnabled(false)
+        mRenderer.isShowLegend = false
+        mRenderer.xLabels = 10 // No. of xtics
+        mRenderer.isClickEnabled = false
         mRenderer.setPanEnabled(false, false)
         var value = TypedValue.applyDimension(
             TypedValue.COMPLEX_UNIT_SP,
             12f,
             myMetrics
         )
-        mRenderer.setLabelsTextSize(value)
+        mRenderer.labelsTextSize = value
         value = TypedValue.applyDimension(
             TypedValue.COMPLEX_UNIT_SP,
             8f,
@@ -92,8 +92,8 @@ class NaaradPlotter(metrics: DisplayMetrics?) {
     fun reDraw() {
         if (doReDraw && (mTimeChartView != null) && (!stopRecording)) {
             mTimeChartView?.zoomReset()
-            mRenderer.setYAxisMax(yMax + 0.2)
-            mRenderer.setYAxisMin(yMin - 0.2)
+            mRenderer.yAxisMax = yMax + 0.2
+            mRenderer.yAxisMin = yMin - 0.2
             mTimeChartView?.repaint()
         }
     }

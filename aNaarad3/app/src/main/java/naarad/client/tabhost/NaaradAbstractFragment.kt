@@ -46,11 +46,11 @@ abstract class NaaradAbstractFragment : Fragment() {
             return nodeID2Ndx!!
         }
 
-    public override fun onAttach(context: Context) {
+    override fun onAttach(context: Context) {
         super.onAttach(context)
         if (context is Activity) {
             if (mActivity == null) mActivity = context
-            mActivity!!.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE)
+            mActivity!!.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
         }
         this.nodeID2NdxMap
     }
@@ -63,7 +63,7 @@ abstract class NaaradAbstractFragment : Fragment() {
 
     fun recreateView(v: View?): Boolean {
         if (v != null) {
-            (v.getParent() as ViewGroup).removeView(v)
+            (v.parent as ViewGroup).removeView(v)
             return true
         } else return false
     }
@@ -138,7 +138,7 @@ abstract class NaaradAbstractFragment : Fragment() {
     }
 
     fun uiToast(msg: String?, gravity: Int) {
-        class ToastOnUIThread internal constructor(var thisText: String?, var thisGravity: Int) :
+        class ToastOnUIThread(var thisText: String?, var thisGravity: Int) :
             Runnable {
             override fun run() {
                 toast(thisText, thisGravity)
@@ -204,7 +204,7 @@ abstract class NaaradAbstractFragment : Fragment() {
     @Throws(IOException::class, UnknownHostException::class)
     fun naaradSocket(hostName: String?, port: Int): Socket? {
         val clientSoc = Socket(hostName, port)
-        if (clientSoc.isConnected()) return clientSoc
+        if (clientSoc.isConnected) return clientSoc
         else return null
     }
 

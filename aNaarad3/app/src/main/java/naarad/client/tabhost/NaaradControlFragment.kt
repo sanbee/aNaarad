@@ -86,15 +86,15 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
         xsdp = (xSizeDP * myApp!!.densityDpi / 160.0).toInt()
         ysdp = (ySizeDP * myApp!!.densityDpi / 160.0).toInt()
 
-        pX = event.getX().toInt()
-        pY = event.getY().toInt()
+        pX = event.x.toInt()
+        pY = event.y.toInt()
 
-        oX = v.getHeight() * 2
-        oY = v.getWidth()
+        oX = v.height * 2
+        oY = v.width
         oX = xsdp * 2
         oY = ysdp
-        iX = v.getRight()
-        iY = v.getTop()
+        iX = v.right
+        iY = v.top
         x = pX - oX + iX
         y = pY - oY + iY
 
@@ -109,7 +109,7 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
         lp.setMargins(x, y, 0, 0)
         lp.height = xsdp
         lp.width = ysdp
-        v.setLayoutParams(lp)
+        v.layoutParams = lp
     }
 
     //
@@ -154,14 +154,14 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
 
             //tempBubbleArr[thisID].setText(thisText);
             //myRunnable(int id, String text) 
-            internal constructor(tv: TextView, text: String?) {
+            constructor(tv: TextView, text: String?) {
                 thisTV = tv
                 thisText = text
                 tmp =
                     Html.fromHtml("<p><b>" + thisText + "</b><font size =\"50\" color=\"#0066FF\"></font></p>")
             }
 
-            internal constructor(tv: TextView, text: Spanned?) {
+            constructor(tv: TextView, text: Spanned?) {
                 thisTV = tv
                 tmp = text
             }
@@ -204,11 +204,11 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
     fun setBulbBG(v: View, on: Boolean) {
         if (on) {
             ((v) as ImageView).setImageDrawable(
-                mActivity0!!.getResources().getDrawable(R.drawable.lamp_off)
+                mActivity0!!.resources.getDrawable(R.drawable.lamp_off)
             )
         } else {
             ((v) as ImageView).setImageDrawable(
-                mActivity0!!.getResources().getDrawable(R.drawable.lamp_on)
+                mActivity0!!.resources.getDrawable(R.drawable.lamp_on)
             )
             //v.setBackgroundColor(Color.YELLOW);
         }
@@ -223,13 +223,13 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
     //-----------------------------------------------------------------------------------------
     //
     fun setLampBG(v: View): Boolean {
-        val on: Boolean = (v as ToggleButton).isChecked()
+        val on: Boolean = (v as ToggleButton).isChecked
         if (on) {
             //v.setBackgroundDrawable(mActivity.getResources().getDrawable(R.drawable.lamp_on));
-            v.getBackground().setAlpha(255)
+            v.background.alpha = 255
         } else {
             //		v.setBackgroundDrawable(R.drawable.lamp_off);
-            v.getBackground().setAlpha(128)
+            v.background.alpha = 128
         }
         return on
     }
@@ -243,10 +243,10 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
         currentToggleButton = (v) as ToggleButton
 
         //Log.i("Ctrl Server: ", serverName+":"+serverPort);
-        val tag = (v.getTag() as String?)!!.toInt()
+        val tag = (v.tag as String?)!!.toInt()
         val on = setLampBG(v)
         setBulbBG(bulbArr[tag]!!, !on)
-        messsage = "tell " + v.getTag() + " "
+        messsage = "tell " + v.tag + " "
 
         if (on) messsage += "1"
         else messsage += "0"
@@ -278,7 +278,7 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
             val selItem = gDnDParams!!.selected_item!!
             var tt = (selItem.getTag(R.integer.key0) as Number).toFloat()
             var unit = selItem.getTag(R.integer.key1) as String?
-            val nodeid = selItem.getTag() as Int
+            val nodeid = selItem.tag as Int
             if (unit === "C") {
                 tt = tt * 9.0f / 5.0f + 32.0f
                 unit = "F"
@@ -298,12 +298,12 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
 
             val selItem = gDnDParams!!.selected_item!!
             gDnDParams!!.touchFlag_p = true
-            selItem.getBackground()?.setAlpha(80)
+            selItem.background?.alpha = 80
 
             myApp!!.swipeState = false
 
-            gDnDParams!!.longPress_x = e.getX().toInt()
-            gDnDParams!!.longPress_y = e.getY().toInt()
+            gDnDParams!!.longPress_x = e.x.toInt()
+            gDnDParams!!.longPress_y = e.y.toInt()
             return
         }
     }
@@ -318,9 +318,9 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
             super.onSingleTapUp(e)
             val selItem = gDnDParams!!.selected_item!!
             val tag = (selItem.getTag(R.integer.key0)) as Int
-            val on = lampArr[tag]!!.isChecked()
+            val on = lampArr[tag]!!.isChecked
             setBulbBG(selItem, on)
-            lampArr[tag]!!.setChecked(!on)
+            lampArr[tag]!!.isChecked = !on
             lampHandler0(lampArr[tag]!!)
             return false
         }
@@ -333,18 +333,18 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
             (selItem as ImageView).setAlpha(100)
 
             selItem.setBackgroundColor(Color.GREEN)
-            selItem.getBackground()?.setAlpha(100)
+            selItem.background?.alpha = 100
 
             myApp!!.swipeState = false
-            gDnDParams!!.longPress_x = e.getX().toInt()
-            gDnDParams!!.longPress_y = e.getY().toInt()
+            gDnDParams!!.longPress_x = e.x.toInt()
+            gDnDParams!!.longPress_y = e.y.toInt()
 
             val loc = IntArray(2)
             selItem.getLocationOnScreen(loc)
             System.err.println(
                 ("On screen (x,y): "
                         + loc[0] + " " + loc[1] + " "
-                        + selItem.getRight() + " " + selItem.getTop() + " "
+                        + selItem.right + " " + selItem.top + " "
                         + gDnDParams!!.longPress_x + " " + gDnDParams!!.longPress_y)
             )
 
@@ -416,7 +416,7 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
         // Set up the handlers for events on the toggle buttons
         // (Single click).
         for (i in lampArr.indices) {
-            lampArr[i]?.setTag(i.toString())
+            lampArr[i]?.tag = i.toString()
             lampArr[i]?.setOnClickListener(lampHandler)
             lampArr[i]?.let { setLampBG(it) }
         }
@@ -447,8 +447,8 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
         // To add more icons/buttons, adding to the following arrays
         // would be sufficient.
         //
-        mActivity0 = getActivity()
-        lampArr = kotlin.arrayOfNulls<ToggleButton>(3)
+        mActivity0 = activity
+        lampArr = arrayOfNulls<ToggleButton>(3)
         bulbArr = arrayOfNulls<ImageView>(3)
 
         val keys = getKeysAsArray(nodeID2Ndx!!)
@@ -482,7 +482,7 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
             tempBubbleArr[i]!!.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12f)
             tempBubbleArr[i]!!.setTag(R.integer.key1, "C")
             //tempBubbleArr[0].setTag(1); // Set the default tag value
-            tempBubbleArr[i]!!.setTag(keys[i]) // Set the default tag value
+            tempBubbleArr[i]!!.tag = keys[i] // Set the default tag value
             //setBubbleValue(1,20.63f);
             //tempBubbleArr[0].setText(Html.fromHtml("<p><b>21.63C</b><font size =\"50\" color=\"#0066FF\"></font></p>"));
             tempBubbleArr[i]!!.setTextColor(Color.parseColor("white"))
@@ -527,7 +527,7 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
                 run {
                     System.err.println(
                         ("bulb" + i
-                                + " " + (bulbArr[i]!!.getParent() as View).getLeft() // +" "+bulbArr[i].getTotalPaddingRight()
+                                + " " + (bulbArr[i]!!.parent as View).left // +" "+bulbArr[i].getTotalPaddingRight()
                                 // +" "+bulbArr[i].getTotalPaddingLeft()
                                 // +" "+bulbArr[i].getTotalPaddingTop()
                                 // +" "+bulbArr[i].getTotalPaddingBottom()
@@ -541,24 +541,24 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
         xMargin = (xMargin * myApp!!.densityDpi).toInt()
         for (i in tempBubbleArr.indices) {
             tempBubbleArr[i]!!.measure(MeasureSpec.UNSPECIFIED, MeasureSpec.UNSPECIFIED)
-            var width = tempBubbleArr[i]!!.getMeasuredWidth()
-            var height = tempBubbleArr[i]!!.getMeasuredHeight()
+            var width = tempBubbleArr[i]!!.measuredWidth
+            var height = tempBubbleArr[i]!!.measuredHeight
             width = myApp!!.dpToPixel(45) //(int)(45*myApp.densityDpi);
             height = myApp!!.dpToPixel(25) //(int)(25*myApp.densityDpi);
             x = getPreference("bubbleX" + String.format("%d", i), -1)
             y = getPreference("bubbleY" + String.format("%d", i), -1)
             //int xPadding = 1+tempBubbleArr[i].getTotalPaddingRight()+tempBubbleArr[i].getTotalPaddingLeft();
             val xPadding =
-                ((1 + tempBubbleArr[i]!!.getTotalPaddingRight() + tempBubbleArr[i]!!.getTotalPaddingLeft())) //*1.5F/2.0F),
+                ((1 + tempBubbleArr[i]!!.totalPaddingRight + tempBubbleArr[i]!!.totalPaddingLeft)) //*1.5F/2.0F),
             val yPadding =
-                ((1 + tempBubbleArr[i]!!.getTotalPaddingTop() + tempBubbleArr[i]!!.getTotalPaddingBottom())) //*1.5F/2.0F);
+                ((1 + tempBubbleArr[i]!!.totalPaddingTop + tempBubbleArr[i]!!.totalPaddingBottom)) //*1.5F/2.0F);
             System.err.println(
                 ("bubble" + i
-                        + " " + tempBubbleArr[i]!!.getTotalPaddingRight()
-                        + " " + tempBubbleArr[i]!!.getTotalPaddingLeft()
-                        + " " + tempBubbleArr[i]!!.getTotalPaddingTop()
-                        + " " + tempBubbleArr[i]!!.getTotalPaddingBottom()
-                        + " " + (tempBubbleArr[i]!!.getParent() as View).getLeft()
+                        + " " + tempBubbleArr[i]!!.totalPaddingRight
+                        + " " + tempBubbleArr[i]!!.totalPaddingLeft
+                        + " " + tempBubbleArr[i]!!.totalPaddingTop
+                        + " " + tempBubbleArr[i]!!.totalPaddingBottom
+                        + " " + (tempBubbleArr[i]!!.parent as View).left
                         + " " + xPadding + " " + yPadding
                         + " " + myApp!!.densityDpi)
             )
@@ -583,7 +583,7 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
     //
     //-----------------------------------------------------------------------------------------
     //
-    public override fun onCreateView(
+    override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
@@ -592,7 +592,7 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
 
         //Log.i("dpi: ",Integer.toString(myApp.densityDpi));
         setRetainInstance(true)
-        mActivity0 = getActivity()
+        mActivity0 = activity
         gDnDParams = NaaradDnDParameters()
 
         if (recreateView(mView)) return mView!!
@@ -631,37 +631,38 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
         // installHandlers(gLampHandler, gOnTouchListener, lampArr, bulbArr);
         // tempBubbleArr[0].setOnTouchListener(gBubbleOnTouchListener);
         // tempBubbleArr[1].setOnTouchListener(gBubbleOnTouchListener);
-        mView!!.getBackground().setAlpha(100)
+        mView!!.background.alpha = 100
 
         return mView!!
     }
 
-    public override fun onResume() {
+    override fun onResume() {
         super.onResume()
         makeSensorIcons(mView!!)
-        val lp: MarginLayoutParams = mView!!.getLayoutParams() as MarginLayoutParams
-        System.err.println(
-            "Offsets: " +
-                    lp.leftMargin + " " +
-                    lp.rightMargin
-        )
+        (mView?.layoutParams as? MarginLayoutParams)?.let { lp ->
+            System.err.println(
+                "Offsets: " +
+                        lp.leftMargin + " " +
+                        lp.rightMargin
+            )
+        }
         getRetainInstance()
         System.err.println("From NCF::onResume")
     }
 
-    public override fun onPause() {
+    override fun onPause() {
         super.onPause()
         setRetainInstance(true)
         System.err.println("From NCF::onPause")
         val xf = 1.0
         val yf = 1.0 //480.0/600.0, yf=800.0/1024.0;
         for (i in lampArr.indices) {
-            setPreference("bulbX" + String.format("%d", i), (bulbArr[i]!!.getRight() * xf).toInt())
-            setPreference("bulbY" + String.format("%d", i), (bulbArr[i]!!.getTop() * yf).toInt())
+            setPreference("bulbX" + String.format("%d", i), (bulbArr[i]!!.right * xf).toInt())
+            setPreference("bulbY" + String.format("%d", i), (bulbArr[i]!!.top * yf).toInt())
         }
         for (i in tempBubbleArr.indices) {
-            setPreference("bubbleX" + String.format("%d", i), tempBubbleArr[i]!!.getRight())
-            setPreference("bubbleY" + String.format("%d", i), tempBubbleArr[i]!!.getTop())
+            setPreference("bubbleX" + String.format("%d", i), tempBubbleArr[i]!!.right)
+            setPreference("bubbleY" + String.format("%d", i), tempBubbleArr[i]!!.top)
         }
     }
 
@@ -724,10 +725,10 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
                 //Toast.makeText(mActivity0, result, Toast.LENGTH_SHORT).show();
                 toast(result, Gravity.TOP or Gravity.RIGHT)
                 currentToggleButton?.let { btn ->
-                    val on = btn.isChecked()
-                    val tag = (btn.getTag() as String?)!!.toInt()
+                    val on = btn.isChecked
+                    val tag = (btn.tag as String?)!!.toInt()
 
-                    btn.setChecked(!on)
+                    btn.isChecked = !on
                     setBulbBG(bulbArr[tag]!!, on)
                 }
             }

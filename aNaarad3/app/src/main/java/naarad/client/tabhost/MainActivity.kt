@@ -58,14 +58,14 @@ class MainActivity : FragmentActivity(), OnTabChangeListener, OnPageChangeListen
 
     override fun onResume() {
         super.onResume()
-        if (this.mViewPager == null) this.mViewPager = findViewById(R.id.viewpager) as MyViewPager?
+        if (this.mViewPager == null) this.mViewPager = findViewById<MyViewPager>(R.id.viewpager)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        if (this.mViewPager == null) this.mViewPager = findViewById(R.id.viewpager) as MyViewPager?
+        if (this.mViewPager == null) this.mViewPager = findViewById<MyViewPager>(R.id.viewpager)
 
 
         // Tab Initialization
@@ -116,7 +116,7 @@ class MainActivity : FragmentActivity(), OnTabChangeListener, OnPageChangeListen
 
     // Tabs Creation
     private fun initialiseTabHost() {
-        mTabHost = findViewById(android.R.id.tabhost) as TabHost
+        mTabHost = findViewById<TabHost>(android.R.id.tabhost)!!
         mTabHost!!.setup()
 
         AddTab(

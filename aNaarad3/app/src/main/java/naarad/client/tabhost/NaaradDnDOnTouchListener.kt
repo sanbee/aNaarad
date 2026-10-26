@@ -71,7 +71,7 @@ class NaaradDnDOnTouchListener(//private View selected_item=null;
         //	if ((touchFlag_l==true) && (selected_item != null))
         if ((touchFlag_l == true) && (v != null)) {
             //System.err.println("Display If  Part ::->"+touchFlag_l);
-            when (event.getActionMasked()) {
+            when (event.actionMasked) {
                 MotionEvent.ACTION_MOVE -> {
                     var x: Int
                     var y: Int
@@ -83,20 +83,20 @@ class NaaradDnDOnTouchListener(//private View selected_item=null;
                     val iY: Int
                     var dx: Int
                     var dy: Int
-                    pX = event.getX().toInt()
-                    pY = event.getY().toInt()
+                    pX = event.x.toInt()
+                    pY = event.y.toInt()
 
                     // w=selected_item.getHeight();
                     // h=selected_item.getWidth();
-                    w = v.getHeight()
-                    h = v.getWidth()
+                    w = v.height
+                    h = v.width
                     oX = myApp.dpToPixel(mySizeXDP) //(int)(mySizeXDP*myApp.densityDpi);//160.0);
                     oY = myApp.dpToPixel(mySizeYDP) //(int)(mySizeYDP*myApp.densityDpi);//160.0);
 
                     // iX=selected_item.getRight();
                     // iY=selected_item.getTop();
-                    iX = v.getRight()
-                    iY = v.getTop()
+                    iX = v.right
+                    iY = v.top
 
                     x = pX - oX + iX
                     y = pY - oY + iY
@@ -136,7 +136,7 @@ class NaaradDnDOnTouchListener(//private View selected_item=null;
 
     private fun myOnTouchListener_p(v: View, event: MotionEvent): Boolean {
         var ret = true
-        val act = event.getActionMasked()
+        val act = event.actionMasked
 
         if (act != MotionEvent.ACTION_MOVE) gGestureDetector.onTouchEvent(event)
 
@@ -164,12 +164,12 @@ class NaaradDnDOnTouchListener(//private View selected_item=null;
                     v.setBackgroundColor(Color.TRANSPARENT)
                 } else if (v is TextView) {
                     //System.err.println("setting alpha");
-                    v.getBackground().setAlpha(100)
+                    v.background.alpha = 100
                 }
 
                 // selected_item.setBackgroundColor(Color.TRANSPARENT);
                 // selected_item=null;
-                System.err.println("Drop pos.: " + v.getRight() + " " + v.getTop())
+                System.err.println("Drop pos.: " + v.right + " " + v.top)
                 run {}
                 //SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(context)
                 //setPreference("posx",v.getRight());

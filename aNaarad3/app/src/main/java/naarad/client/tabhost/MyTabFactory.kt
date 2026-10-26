@@ -7,8 +7,8 @@ import android.widget.TabHost.TabContentFactory
 class MyTabFactory(private val mContext: Context?) : TabContentFactory {
     override fun createTabContent(tag: String?): View {
         val v = View(mContext)
-        v.setMinimumWidth(0)
-        v.setMinimumHeight(0)
+        v.minimumWidth = 0
+        v.minimumHeight = 0
         return v
     }
 }

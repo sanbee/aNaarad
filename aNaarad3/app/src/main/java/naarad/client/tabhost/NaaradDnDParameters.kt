@@ -34,6 +34,6 @@ class NaaradDnDParameters {
         if (h > 0) lp.height = (h * hFudge).toInt()
         if (w > 0) lp.width = (w * wFudge).toInt()
         //selected_item.setLayoutParams(lp);
-        v.setLayoutParams(lp)
+        v.layoutParams = lp
     }
 }

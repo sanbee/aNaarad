@@ -1,6 +1,6 @@
 package com.example.anaarad3
 
-import org.junit.jupiter.api.Test
+import org.junit.Test
 
 import org.junit.Assert.*
 

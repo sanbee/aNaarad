@@ -16,7 +16,7 @@ class NaaradWifiBroadcastReceiver : BroadcastReceiver() {
 
         var tries = 0
         while (tries < 10) {
-            if (mWifi!!.isConnected()) {
+            if (mWifi!!.isConnected) {
                 Toast.makeText(context, "Checking Wifi...", Toast.LENGTH_SHORT).show()
                 break
             } else {
@@ -24,7 +24,7 @@ class NaaradWifiBroadcastReceiver : BroadcastReceiver() {
                 tries++
             }
         }
-        if (!mWifi!!.isConnected()) Toast.makeText(
+        if (!mWifi!!.isConnected) Toast.makeText(
             context,
             "Wifi yet not connected...",
             Toast.LENGTH_SHORT

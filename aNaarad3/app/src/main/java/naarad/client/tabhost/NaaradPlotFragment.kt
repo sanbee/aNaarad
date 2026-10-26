@@ -15,6 +15,7 @@ import android.os.SystemClock
 import android.util.DisplayMetrics
 import android.util.Log
 import android.util.TypedValue
+import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -148,7 +149,7 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
     //
     //-----------------------------------------------------------------------------------------
     //
-    public override fun onCreateView(
+    override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
@@ -157,24 +158,32 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
         //Log.i("API Level: ",android.os.Build.VERSION.RELEASE+" "+Integer.toString(apiLevel));
         setHasOptionsMenu(true)
         setRetainInstance(true)
-        myApp = getActivity().getApplication() as NaaradApp
+//	val myApp = getActivity().getApplication() as NaaradApp
 
-        if (!recreateView(mView)) mView =
-            inflater.inflate(R.layout.activity_naarad_plot, container, false)
+//	val myApp = (getActivity()?.getApplication() as? NaaradApp) 
+	val currentActivity = activity
+	if (currentActivity != null) {
+	myApp = currentActivity.application as NaaradApp
+	} else {
+	// Log an error or handle the missing activity state here safely
+	}
 
+        if (!recreateView(mView))
+	    mView = inflater.inflate(R.layout.activity_naarad_plot, container, false)
+	
 
         // This makes sure that the container activity has implemented
         // the callback interface. If not, it throws an exception.
         try {
-            mMainActivityCallback = getActivity() as nPlotDataArrivalListener
+            mMainActivityCallback = activity as nPlotDataArrivalListener
         } catch (e: ClassCastException) {
             throw ClassCastException(
-                getActivity().toString()
+                activity.toString()
                         + " must implement mMainActivityCallback"
             )
         }
 
-        myPlotter = NaaradPlotter(getResources().getDisplayMetrics())
+        myPlotter = NaaradPlotter(resources.displayMetrics)
         myPlotter!!.initMultiRenderer()
         myPlotter!!.makeSeries(Color.GREEN)
         myPlotter!!.makeSeries(Color.BLUE)
@@ -183,7 +192,7 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
             myPlotter!!.mRenderer,
             myPlotter!!.mTimeChartView
         )
-        myPlotter!!.makeChart(getActivity(), mView)
+        myPlotter!!.makeChart(activity, mView!!)
 
         initMultiRenderer(mRenderer)
         makeSeries(mRenderer, mDataset, Color.GREEN)
@@ -244,25 +253,25 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
         if (mSensorDataSource != null) mSensorDataSource!!.finish()
     }
 
-    public override fun onDestroy() {
+    override fun onDestroy() {
         System.err.println("NPF destroyed")
         super.onDestroy()
         stopDataSource()
     }
 
-    public override fun onResume() {
+    override fun onResume() {
         System.err.println("NPF resumed")
         super.onResume()
     }
 
-    public override fun onPause() {
+    override fun onPause() {
         // if (mUpdateTask0 != null) mUpdateTask0.cancel(true);
         // if (mUpdateTask1 != null) mUpdateTask1.cancel(true);
 
         System.err.println("NPF paused")
         super.onPause()
         stopDataSource()
-        if (myApp!!.myWakeLock!!.isHeld()) {
+        if (myApp!!.myWakeLock!!.isHeld) {
             myApp!!.myWakeLock!!.release()
             System.err.println("Releasing wake lock")
         }
@@ -276,15 +285,15 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
         multiDataset: XYMultipleSeriesDataset,
         color: Int
     ) {
-        val seriesTitle = "Series " + (multiDataset.getSeriesCount() + 1)
+        val seriesTitle = "Series " + (multiDataset.seriesCount + 1)
         val series0: XYSeries = XYSeries(seriesTitle)
         multiDataset.addSeries(series0)
         val renderer0: XYSeriesRenderer = XYSeriesRenderer()
-        renderer0.setPointStyle(PointStyle.CIRCLE)
-        renderer0.setFillPoints(true)
-        renderer0.setLineWidth(2f)
+        renderer0.pointStyle = PointStyle.CIRCLE
+        renderer0.isFillPoints = true
+        renderer0.lineWidth = 2f
         //renderer0.setColor(Color.GREEN);
-        renderer0.setColor(color)
+        renderer0.color = color
         multiRenderer.addSeriesRenderer(renderer0)
     }
 
@@ -292,26 +301,26 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
     //-----------------------------------------------------------------------------------------
     //
     private fun initMultiRenderer(multiRenderer: XYMultipleSeriesRenderer?) {
-        mRenderer.setApplyBackgroundColor(true)
-        mRenderer.setBackgroundColor(Color.argb(100, 50, 50, 50))
-        mRenderer.setAxisTitleTextSize(10f)
-        mRenderer.setChartTitleTextSize(10f)
-        mRenderer.setLabelsTextSize(10f)
-        mRenderer.setLegendTextSize(10f)
-        mRenderer.setMargins(intArrayOf(2, 20, 5, 2)) //Top, Left, Bottom, Right
-        mRenderer.setZoomButtonsVisible(false)
-        mRenderer.setPointSize(2f)
-        mRenderer.setXTitle("")
-        mRenderer.setYTitle("Temperature")
+        mRenderer.isApplyBackgroundColor = true
+        mRenderer.backgroundColor = Color.argb(100, 50, 50, 50)
+        mRenderer.axisTitleTextSize = 10f
+        mRenderer.chartTitleTextSize = 10f
+        mRenderer.labelsTextSize = 10f
+        mRenderer.legendTextSize = 10f
+        mRenderer.margins = intArrayOf(2, 20, 5, 2) //Top, Left, Bottom, Right
+        mRenderer.isZoomButtonsVisible = false
+        mRenderer.pointSize = 2f
+        mRenderer.xTitle = ""
+        mRenderer.yTitle = "Temperature"
         mRenderer.setShowGrid(true)
-        mRenderer.setShowLegend(false)
-        mRenderer.setXLabels(10) // No. of xtics
-        mRenderer.setClickEnabled(false)
+        mRenderer.isShowLegend = false
+        mRenderer.xLabels = 10 // No. of xtics
+        mRenderer.isClickEnabled = false
         mRenderer.setPanEnabled(false, false)
         //multiRenderer.setMarginsColor(Color.argb(0x00, 0xff, 0x00, 0x00));
-        val metrics: DisplayMetrics? = getResources().getDisplayMetrics()
+        val metrics: DisplayMetrics? = resources.displayMetrics
         var `val` = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 12f, metrics)
-        mRenderer.setLabelsTextSize(`val`)
+        mRenderer.labelsTextSize = `val`
         `val` = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 8f, metrics)
         mRenderer.setTextTypeface("sans_serif", Typeface.BOLD)
     }
@@ -327,7 +336,7 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
         // mDataset.getSeriesAt(0).add(0,new Date().getTime());
         // mDataset.getSeriesAt(0).add(1,new Date().getTime()+30000.0);
         mTimeChartView = ChartFactory.getTimeChartView(
-            getActivity(),
+            activity,
             mDataset,
             mRenderer,
             "hh:mm:ss\ndd/MM"
@@ -376,7 +385,8 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
     //-----------------------------------------------------------------------------------------
     //
     fun stopAllCharts(n: Int) {
-        if (mSensorDataSource != null) mSensorDataSource.cancel(true)
+    //        if (mSensorDataSource != null)
+	   mSensorDataSource?.cancel(true)
     }
 
     //
@@ -660,7 +670,7 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
             run {
                 allDone = false
                 nConnected = true
-                val keys: IntArray? = getKeysAsArray(nodeID2Ndx!!)
+                val keys: IntArray = getKeysAsArray(nodeID2Ndx!!)
 
                 //thisSeries = params[0].getSeriesAt(0);
 
@@ -692,7 +702,7 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
             // xMin = thisSeries.getMinX();
             // if (x > xMax) xMax = x;
             // if (x < xMin)) xMin = x;
-            n = thisSeries.getItemCount()
+            n = thisSeries.itemCount
             if ((n > 0)) {
                 //		    if ((thisSeries.getX(n-1)-x) >= 300000)
                 if ((thisSeries.getX(n - 1) - x) >= 120000) thisSeries.add(x, y)
@@ -739,12 +749,12 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
         //    
         protected fun reDraw() {
             if (doReDraw) if ((mTimeChartView != null) && (stopRecording == false)) {
-                mTimeChartView.zoomReset()
-                mRenderer.setYAxisMax(yMax + 0.2)
-                mRenderer.setYAxisMin(yMin - 0.2)
+                mTimeChartView!!.zoomReset()
+                mRenderer.yAxisMax = yMax + 0.2
+                mRenderer.yAxisMin = yMin - 0.2
                 // mRenderer.setYAxisMax(40.0);
                 // mRenderer.setYAxisMin(-10.0);
-                mTimeChartView.repaint()
+                mTimeChartView!!.repaint()
             }
         }
 
