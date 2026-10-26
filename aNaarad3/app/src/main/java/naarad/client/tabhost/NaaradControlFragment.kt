@@ -300,6 +300,7 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
             gDnDParams!!.touchFlag_p = true
             selItem.background?.alpha = 80
 
+            selItem.parent?.requestDisallowInterceptTouchEvent(true)
             myApp!!.swipeState = false
 
             gDnDParams!!.longPress_x = e.x.toInt()
@@ -335,6 +336,7 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
             selItem.setBackgroundColor(Color.GREEN)
             selItem.background?.alpha = 100
 
+            selItem.parent?.requestDisallowInterceptTouchEvent(true)
             myApp!!.swipeState = false
             gDnDParams!!.longPress_x = e.x.toInt()
             gDnDParams!!.longPress_y = e.y.toInt()

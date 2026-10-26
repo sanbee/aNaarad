@@ -3,6 +3,8 @@ package naarad.client.tabhost
 import android.content.IntentFilter
 import android.graphics.Color
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
@@ -30,6 +32,24 @@ class NaaradSettingFragment : NaaradAbstractFragment() {
     private var gServerPort = 0
     private var gServerName: String? = null
 
+    private fun saveSettingsFromFields() {
+        val name = serverNameField?.text?.toString()?.trim()
+        if (!name.isNullOrEmpty()) {
+            gServerName = name
+            serverName = name
+        }
+        val portStr = serverPortField?.text?.toString()?.trim()
+        try {
+            val port = portStr?.toInt() ?: defaultPort
+            if (port > 0) {
+                gServerPort = port
+                serverPort = port
+            }
+        } catch (nfe: NumberFormatException) {
+            // keep existing port
+        }
+    }
+
     override fun onPause() {
         super.onPause()
         var giveMsg = false
@@ -42,8 +62,9 @@ class NaaradSettingFragment : NaaradAbstractFragment() {
             giveMsg = true
         }
         if (giveMsg) toast("Wake and Wifi locks released.", Gravity.BOTTOM)
-        setPreference("serverName", gServerName)
-        setPreference("gServerPort", gServerPort)
+
+        saveSettingsFromFields()
+
         setPreference("wifiControl", gWifiControl)
         setPreference("wakeControl", gWakeLockControl)
         if (wifiTurnedOnByMe) {
@@ -110,9 +131,46 @@ class NaaradSettingFragment : NaaradAbstractFragment() {
             mView?.findViewById<View?>(R.id.serverName) as? EditText
         serverPortField =
             mView?.findViewById<View?>(R.id.serverPort) as? EditText
-        serverPortField?.setText(defaultPort.toString())
-        System.err.println("Default Server Name" + defaultServer)
-        serverNameField?.setText(defaultServer)
+
+        // Pre-populate fields with remembered serverName and serverPort
+        val savedServerName = serverName ?: defaultServer ?: "raspberrypi"
+        val savedServerPort = serverPort
+
+        gServerName = savedServerName
+        gServerPort = savedServerPort
+
+        serverNameField?.setText(savedServerName)
+        serverPortField?.setText(savedServerPort.toString())
+
+        // Save immediately as user types
+        serverNameField?.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                val name = s?.toString()?.trim()
+                if (!name.isNullOrEmpty()) {
+                    gServerName = name
+                    serverName = name
+                }
+            }
+        })
+
+        serverPortField?.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                try {
+                    val port = s?.toString()?.trim()?.toInt() ?: defaultPort
+                    if (port > 0) {
+                        gServerPort = port
+                        serverPort = port
+                        setButton?.setTextColor(Color.GREEN)
+                    }
+                } catch (e: NumberFormatException) {
+                    setButton?.setTextColor(Color.RED)
+                }
+            }
+        })
 
         setButton =
             mView?.findViewById<View?>(R.id.setButton) as? Button
@@ -139,23 +197,9 @@ class NaaradSettingFragment : NaaradAbstractFragment() {
         }
 
         setButton?.setOnClickListener {
-            gServerPort = defaultPort
-            gServerName =
-                serverNameField?.text?.toString()
-            try {
-                gServerPort = serverPortField?.text?.toString()?.toInt() ?: defaultPort
-                if (gServerPort <= 0) throw NumberFormatException("Port number < 0")
-                else setButton?.setTextColor(Color.GREEN)
-            } catch (nfe: NumberFormatException) {
-                val msg = "Wrong Port number: " + nfe.message
-                println(msg)
-                context?.let { ctx ->
-                    Toast.makeText(ctx, msg, Toast.LENGTH_SHORT).show()
-                }
-                setButton?.setTextColor(Color.RED)
-            }
-            setPreference("serverName", gServerName)
-            setPreference("serverPort", gServerPort)
+            saveSettingsFromFields()
+            setButton?.setTextColor(Color.GREEN)
+            toast("Settings saved: $gServerName:$gServerPort", Gravity.BOTTOM)
         }
         return mView
     }

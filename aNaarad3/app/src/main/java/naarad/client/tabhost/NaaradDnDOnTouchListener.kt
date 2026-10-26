@@ -153,11 +153,14 @@ class NaaradDnDOnTouchListener(//private View selected_item=null;
         gDnDParams.selected_item = v
 
         when (act) {
-            MotionEvent.ACTION_MOVE -> if (gDnDParams.touchFlag_p)  //ret=containerOnTouch(selected_item, event,true);
+            MotionEvent.ACTION_MOVE -> if (gDnDParams.touchFlag_p) {
+                v.parent?.requestDisallowInterceptTouchEvent(true)
                 ret = containerOnTouch(v, event, true)
+            }
 
-            MotionEvent.ACTION_UP -> {
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                 gDnDParams.touchFlag_p = false
+                v.parent?.requestDisallowInterceptTouchEvent(false)
 
                 if (v is ImageView) {
                     v.setAlpha(255)

@@ -10,7 +10,13 @@ import android.view.WindowManager
 
 //import android.net.wifi.WifiManager.WifiLock;
 class NaaradApp : Application() {
+    var onSwipeStateChanged: ((Boolean) -> Unit)? = null
+
     var swipeState: Boolean = true
+        set(value) {
+            field = value
+            onSwipeStateChanged?.invoke(value)
+        }
     @JvmField
     var densityDpi: Float = 0f
     @JvmField
