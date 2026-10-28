@@ -72,6 +72,7 @@ class MainActivity : FragmentActivity(), NaaradPlotFragment.nPlotDataArrivalList
 
         pageAdapter = NaaradPagerAdapter(this, controlFragment, plotFragment, settingFragment)
         mViewPager!!.adapter = pageAdapter
+        mViewPager!!.offscreenPageLimit = 2
 
         val myApp = application as? NaaradApp
         if (myApp != null && mViewPager != null) {

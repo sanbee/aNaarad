@@ -133,7 +133,7 @@ class NaaradSettingFragment : NaaradAbstractFragment() {
             mView?.findViewById<View?>(R.id.serverPort) as? EditText
 
         // Pre-populate fields with remembered serverName and serverPort
-        val savedServerName = serverName ?: defaultServer ?: "raspberrypi"
+        val savedServerName = serverName ?: defaultServer
         val savedServerPort = serverPort
 
         gServerName = savedServerName

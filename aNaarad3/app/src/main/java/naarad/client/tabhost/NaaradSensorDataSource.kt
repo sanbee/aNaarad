@@ -23,7 +23,7 @@ class NaaradSensorDataSource(
     thisTimeChartView: GraphicalView?
 ) {
     protected var nodeid: Int = 0
-    private var allDone = false
+    @Volatile private var allDone = false
     private var doReDraw = true
     protected var x0: Double = 0.0
     protected var y0: Double = 0.0
@@ -32,25 +32,57 @@ class NaaradSensorDataSource(
     protected var yMax: Double = 0.0
     protected var yMin: Double = 100.0
     protected var stopRecording: Boolean = false
+    private var activeSocket: Socket? = null
 
     private var mDataset: XYMultipleSeriesDataset? = thisDataset
     private var mRenderer: XYMultipleSeriesRenderer? = thisRenderer
     private var mTimeChartView: GraphicalView? = thisTimeChartView
 
-    @Throws(JSONException::class)
-    private fun publishJSON(jsonTokens: Array<String?>, params: Array<XYMultipleSeriesDataset?>) {
-        var jsonStr: String? = ""
-        for (j in 1..2) jsonStr += jsonTokens[j]
+    fun finish() {
+        allDone = true
+        try {
+            activeSocket?.close()
+        } catch (ignored: Exception) {}
+    }
 
+    private fun openSocket(host: String, port: Int): Socket? {
+        if (host.isEmpty() || port <= 0) return null
+        return try {
+            val socket = Socket()
+            socket.soTimeout = 3000
+            socket.connect(java.net.InetSocketAddress(host, port), 2000)
+            if (socket.isConnected) {
+                activeSocket = socket
+                socket
+            } else null
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    @Throws(JSONException::class)
+    private fun publishJSON(message: String, params: Array<XYMultipleSeriesDataset?>) {
+        val jsonStart = message.indexOf('{')
+        val jsonEnd = message.lastIndexOf('}')
+        if (jsonStart < 0 || jsonEnd <= jsonStart) return
+
+        val jsonStr = message.substring(jsonStart, jsonEnd + 1)
         val json = JSONObject(jsonStr)
-        if (json.getInt("rf_fail") == 0) {
-            nodeid = json.getInt("node_id")
-            x0 = json.getDouble("time")
-            y0 = json.getDouble("degc").toFloat().toDouble()
-            val ndx = NaaradUtils.nodeID2Ndx?.get(nodeid) ?: 0
-            val series = params[0]?.getSeriesAt(ndx)
-            if (series != null) {
-                publishProgress(series)
+        if (json.optInt("rf_fail", 0) == 0) {
+            nodeid = json.optInt("node_id", 1)
+            var timestamp = json.optDouble("time", System.currentTimeMillis().toDouble())
+            if (timestamp > 0 && timestamp < 10_000_000_000.0) {
+                timestamp *= 1000.0
+            }
+            x0 = timestamp
+            y0 = json.optDouble("degc", 0.0)
+            val seriesCount = params[0]?.seriesCount ?: 0
+            if (seriesCount > 0) {
+                val ndx = NaaradUtils.nodeID2Ndx?.get(nodeid) ?: (Math.abs(nodeid) % seriesCount)
+                val series = params[0]?.getSeriesAt(ndx)
+                if (series != null) {
+                    publishProgress(series)
+                }
             }
         } else {
             NaaradUtils.uiToast("Packet invalid (rf_fail=1)", Gravity.BOTTOM)
@@ -67,28 +99,25 @@ class NaaradSensorDataSource(
         val mySocWriter = PrintWriter(mySoc.getOutputStream(), true)
         val mySocReader = BufferedReader(InputStreamReader(mySoc.getInputStream()), 100)
         NaaradUtils.naaradWriter(mySocWriter, "SensorDataSync")
+        SystemClock.sleep(50)
 
         for (i in keys.indices) {
-            val msg = ("gethpkt " + keys[i].toString())
+            if (allDone) break
+            val msg = "gethpkt " + keys[i]
             NaaradUtils.naaradWriter(mySocWriter, msg)
-            SystemClock.sleep(100)
-            var message: String? = ""
-            var msgData: String? = ""
-            doReDraw = false
-            while (msgData != "PHINISHED") {
-                message = NaaradUtils.naaradReader(mySocReader)
-                if (message == null) throw JSONException("JSON message is null")
-                val tokens: Array<String?> =
-                    message.split(" ".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
-                msgData = tokens[1]!!.trim { it <= ' ' }
-                if (msgData != "PHINISHED") publishJSON(tokens, params)
-            }
+            SystemClock.sleep(50)
+
             doReDraw = true
+            while (!allDone) {
+                val message = NaaradUtils.naaradReader(mySocReader) ?: break
+                if (message.contains("PHINISHED")) break
+                if (message.contains("{")) {
+                    publishJSON(message, params)
+                }
+            }
             reDraw()
         }
         NaaradUtils.naaradWriter(mySocWriter, "done")
-        mySoc.close()
-        doReDraw = true
     }
 
     @Throws(IOException::class, JSONException::class)
@@ -100,112 +129,71 @@ class NaaradSensorDataSource(
         val mySocWriter = PrintWriter(mySoc.getOutputStream(), true)
         val mySocReader = BufferedReader(InputStreamReader(mySoc.getInputStream()), 100)
         NaaradUtils.naaradWriter(mySocWriter, "SensorDataSync")
+        SystemClock.sleep(50)
 
         for (i in keys.indices) {
-            val msg = ("getcpkt " + keys[i].toString())
-            var message: String?
-
+            if (allDone) break
+            val msg = "getcpkt " + keys[i]
             NaaradUtils.naaradWriter(mySocWriter, msg)
-            SystemClock.sleep(100)
-            message = NaaradUtils.naaradReader(mySocReader)
-            if (message == null) throw JSONException("JSON message is null")
-            val tokens: Array<String?> =
-                message.split(" ".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
-            var jsonStr: String? = ""
-            for (j in 1..2) jsonStr += tokens[j]
-            publishJSON(tokens, params)
-        }
+            SystemClock.sleep(50)
 
+            val message = NaaradUtils.naaradReader(mySocReader)
+            if (message != null && message.contains("{")) {
+                publishJSON(message, params)
+            }
+        }
         NaaradUtils.naaradWriter(mySocWriter, "done")
-        mySoc.close()
     }
 
     private fun naaradGetData(
         keys: IntArray, params: Array<XYMultipleSeriesDataset?>,
         getHistory: Boolean
     ) {
+        val host = NaaradUtils.serverName
+        val port = NaaradUtils.serverPort
+        val mySoc = openSocket(host ?: "", port) ?: return
         try {
-            val port = NaaradUtils.serverPort
-            val serverName = NaaradUtils.serverName ?: "raspberrypi"
-            var mySoc: Socket? = null
-            var tries = 0
-            while (tries < 10) {
-                mySoc = NaaradUtils.naaradSocket(serverName, port)
-                if (mySoc != null) break
-                tries++
-                val msg = "Connecting to $serverName:$port (try $tries/10)..."
-                NaaradUtils.uiToast(msg, Gravity.BOTTOM)
-                System.err.println(msg)
-                SystemClock.sleep(500)
+            if (getHistory) {
+                naaradGetDataHistoryEngine(keys, params, mySoc)
+            } else {
+                naaradGetDataOnlyEngine(keys, params, mySoc)
             }
-            if (mySoc == null) NaaradUtils.uiToast(
-                "Could not connect to $serverName:$port after 10 tries",
-                Gravity.BOTTOM
-            )
-            else {
-                if (getHistory) naaradGetDataHistoryEngine(keys, params, mySoc)
-                else naaradGetDataOnlyEngine(keys, params, mySoc)
-            }
-        } catch (e: JSONException) {
-            System.err.println(e.message)
-            NaaradUtils.uiToast(e.message ?: "JSONException", Gravity.BOTTOM)
-        } catch (e: UnknownHostException) {
-            val msg =
-                "Unknown host: " + NaaradUtils.serverName + ":" + NaaradUtils.serverPort
-                    .toString() + "\nCheck settings"
-            NaaradUtils.uiToast(msg, Gravity.BOTTOM)
-        } catch (e: IOException) {
-            val msg =
-                "Error connecting to " + NaaradUtils.serverName + ":" + NaaradUtils.serverPort
-                    .toString() + "\nCheck settings"
-            NaaradUtils.uiToast(msg, Gravity.BOTTOM)
+        } catch (e: Exception) {
+            System.err.println("naaradGetData error: " + e.message)
+        } finally {
+            try { mySoc.close() } catch (ignored: Exception) {}
+            activeSocket = null
         }
     }
 
-    private fun stopRecording(status: Boolean) {
-        stopRecording = status
-    }
-
-    fun finish() {
-        allDone = true
-    }
-
     fun addNewData(thisSeries: XYSeries, x: Double, y: Double) {
-        val xMaxVal: Double
-        val xMinVal: Double
-        var dX = 0.0
-        val dT = 1000.0 * 60 * 60 * 12
-        val n: Int = thisSeries.itemCount
-        if (n > 0) {
-            if ((thisSeries.getX(n - 1) - x) >= 300000) thisSeries.add(x, y)
-            else {
-                if (y != thisSeries.getY(n - 1)) {
-                    if (y != MathHelper.NULL_VALUE) {
-                        if (y > yMax) yMax = y
-                        if (y < yMin) yMin = y
-                    }
-                    thisSeries.add(x, y)
-                }
-            }
-        } else thisSeries.add(x, y)
-        if (n > 0) {
-            xMaxVal = thisSeries.getX(n - 1)
-            xMinVal = thisSeries.getX(0)
-            dX = xMaxVal - xMinVal
-            Log.i(
-                "xrange0",
-                xMaxVal.toString() + " " + xMinVal.toString() + " " + dX.toString() + " " + n.toString()
-            )
+        if (y == MathHelper.NULL_VALUE) return
+
+        if (yMax == 0.0 || y > yMax) yMax = y
+        if (yMin == 100.0 || y < yMin) yMin = y
+
+        thisSeries.add(x, y)
+
+        val n = thisSeries.itemCount
+        if (n > 1) {
+            val xMaxVal = thisSeries.getX(n - 1)
+            val xMinVal = thisSeries.getX(0)
+            val dX = xMaxVal - xMinVal
+            val dT = 1000.0 * 60 * 60 * 12 // 12 hours
             if (dX > dT) thisSeries.remove(0)
         }
     }
 
     protected fun reDraw() {
         if (doReDraw && (mTimeChartView != null) && (!stopRecording)) {
-            mTimeChartView?.zoomReset()
-            mRenderer?.yAxisMax = yMax + 0.2
-            mRenderer?.yAxisMin = yMin - 0.2
-            mTimeChartView?.repaint()
+            NaaradAbstractFragment.mActivity?.runOnUiThread {
+                mTimeChartView?.zoomReset()
+                if (yMax > yMin) {
+                    mRenderer?.yAxisMax = yMax + 0.5
+                    mRenderer?.yAxisMin = yMin - 0.5
+                }
+                mTimeChartView?.repaint()
+            }
         }
     }
 

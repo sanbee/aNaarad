@@ -407,11 +407,8 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
     //protected class SensorDataSource extends AsyncTask<XYSeries, XYSeries, String> 
     protected inner class SensorDataSource :
         AsyncTask<XYMultipleSeriesDataset?, XYSeries?, String?>() {
-        //protected Socket clientSoc;
-        //protected PrintWriter socWriter;
-        //protected BufferedReader socReader;
         protected var nodeid: Int = 0
-        private var allDone = false
+        @Volatile private var allDone = false
         private var doReDraw = true
         protected var x0: Double = 0.0
         protected var y0: Double = 0.0
@@ -420,49 +417,76 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
         protected var yMax: Double = 0.0
         protected var yMin: Double = 100.0
         protected var stopRecording: Boolean = false
+        private var activeSocket: Socket? = null
 
-        //protected XYSeries thisSeries;
-        //
-        //----------------------------------------------------------------------------------------------
-        // Given the various tokens that together form the JSON
-        // string, this assembles, parse and publish the data.
-        @Throws(JSONException::class)
+        fun finish() {
+            allDone = true
+            try {
+                activeSocket?.close()
+            } catch (ignored: Exception) {}
+        }
+
+        private fun openSocket(host: String, port: Int): Socket? {
+            if (host.isEmpty() || port <= 0) return null
+            return try {
+                val socket = Socket()
+                socket.soTimeout = 3000
+                socket.connect(java.net.InetSocketAddress(host, port), 2000)
+                if (socket.isConnected) {
+                    activeSocket = socket
+                    socket
+                } else null
+            } catch (e: Exception) {
+                null
+            }
+        }
+
         private fun publishJSON(
-            jsonTokens: Array<String?>,
+            message: String,
             params: Array<out XYMultipleSeriesDataset?>
         ) {
-            var jsonStr: String? = ""
-            for (j in 1..2) jsonStr += jsonTokens[j]
+            val jsonStart = message.indexOf('{')
+            val jsonEnd = message.lastIndexOf('}')
+            if (jsonStart < 0 || jsonEnd <= jsonStart)
+	    {
+		System.err.println("publishJSON: Error in message" + message)
+		return
+	    }
 
 
-            //...publish the data...
+            val jsonStr = message.substring(jsonStart, jsonEnd + 1)
             val json = JSONObject(jsonStr)
-            if (json.getInt("rf_fail") == 0)  // Indicates that the packet is valid
-            {
-                nodeid = json.getInt("node_id")
-                x0 = json.getDouble("time")
-                y0 = json.getDouble("degc").toFloat().toDouble()
+            if (json.optInt("rf_fail", 0) == 0) {
+                nodeid = json.optInt("node_id", 1)
+                var timestamp = json.optDouble("time", System.currentTimeMillis().toDouble())
+                if (timestamp > 0 && timestamp < 10_000_000_000.0) {
+                    timestamp *= 1000.0
+                }
+                x0 = timestamp
+                y0 = json.optDouble("degc", 0.0)
+
+                val dateStr = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault())
+                    .format(java.util.Date(x0.toLong()))
+                // Log.i("NaaradData", "Sensor Node: $nodeid | Time: $dateStr (raw: ${x0.toLong()}) | Temp: $y0 °C")
+                // System.err.println("NaaradData -> Node: $nodeid | Time: $dateStr | Temp: $y0 °C")
+
                 val seriesCount = params[0]?.seriesCount ?: 0
                 if (seriesCount > 0) {
                     val ndx = nodeID2Ndx?.get(nodeid) ?: (Math.abs(nodeid) % seriesCount)
                     val series = params[0]?.getSeriesAt(ndx)
                     if (series != null) {
-                        publishProgress(series)
+                        activity?.runOnUiThread {
+                            addNewData(series, x0, y0)
+                            reDraw()
+                        }
                     }
                 }
-            } else {
-                uiToast("Packet invalid (rf_fail=1)", Gravity.BOTTOM)
-                return
             }
             activity?.runOnUiThread {
                 mMainActivityCallback?.onDataArrival(jsonStr)
             }
         }
 
-        //
-        //----------------------------------------------------------------------------------------------
-        //
-        @Throws(IOException::class, JSONException::class)
         private fun naaradGetDataHistoryEngine(
             keys: IntArray,
             params: Array<out XYMultipleSeriesDataset?>,
@@ -471,32 +495,42 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
             val mySocWriter = PrintWriter(mySoc.getOutputStream(), true)
             val mySocReader = BufferedReader(InputStreamReader(mySoc.getInputStream()), 100)
             naaradWriter(mySocWriter, "SensorDataSync")
+            SystemClock.sleep(100)
 
             for (i in keys.indices) {
-                val msg = ("gethpkt " + keys[i].toString())
+                if (allDone || isCancelled) break
+                val msg = "gethpkt " + keys[i].toString()
+                Log.i("NaaradData", "=== Requesting Historical Data for Sensor Node} ==="+msg)
+                System.err.println("=== Requesting Historical Data for Sensor Node} ==="+msg)
                 naaradWriter(mySocWriter, msg)
                 SystemClock.sleep(100)
-                var message: String? = ""
-                var msgData: String? = ""
-                doReDraw = false
-                while (msgData != "PHINISHED") {
-                    if ((naaradReader(mySocReader).also {
-                            message = it
-                        }) == null) throw (JSONException("JSON message is null"))
-                    val tokens: Array<String?> =
-                        message!!.split(" ".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
-                    msgData = tokens[1]!!.trim { it <= ' ' }
-                    if (msgData != "PHINISHED") publishJSON(tokens, params)
-                }
+
                 doReDraw = true
-                reDraw()
+		var message=""
+//                while (!allDone && !isCancelled )
+		var nPackets: Int=0
+		while(!message.contains("PHINISHED"))
+		{
+                    message = NaaradUtils.naaradReader(mySocReader)// ?: throw(JSONException("JSON message is null in naaradGetDataHistoryEngine()"))//break
+		    nPackets++
+//		    System.err.println("historyJSON: message=" + message)
+                    if (message.contains("PHINISHED")) {
+                        Log.i("NaaradData", "=== Completed Historical Data for Sensor Node ${keys[i]} === "+nPackets)
+                        System.err.println("=== Completed Historical Data for Sensor Node ${keys[i]} === " + nPackets)
+                        break
+                    }
+                    //if (message.contains("{"))
+		    if (!message.contains("PHINISHED"))
+		    {
+			//System.err.println("=== Historical Data for Sensor Node ${keys[i]} ${message} ===\n")
+                       // publishJSON(message, params)
+                    }
+                }
+                activity?.runOnUiThread { reDraw() }
             }
             naaradWriter(mySocWriter, "done")
-            mySoc.close()
-            doReDraw = true
         }
 
-        @Throws(IOException::class, JSONException::class)
         private fun naaradGetDataOnlyEngine(
             keys: IntArray,
             params: Array<out XYMultipleSeriesDataset?>,
@@ -505,183 +539,66 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
             val mySocWriter = PrintWriter(mySoc.getOutputStream(), true)
             val mySocReader = BufferedReader(InputStreamReader(mySoc.getInputStream()), 100)
             naaradWriter(mySocWriter, "SensorDataSync")
+            SystemClock.sleep(50)
 
             for (i in keys.indices) {
-                val msg = ("getcpkt " + keys[i].toString())
-                var message = ""
+                if (allDone || isCancelled) break
+                val msg = "getcpkt " + keys[i]
                 naaradWriter(mySocWriter, msg)
                 SystemClock.sleep(100)
-                if ((naaradReader(mySocReader).also {
-                        message = it!!
-                    }) == null) throw (JSONException("JSON message is null"))
 
-                val tokens: Array<String?> =
-                    message.split(" ".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
-                var jsonStr: String? = ""
-                for (j in 1..2) jsonStr += tokens[j]
-                publishJSON(tokens, params)
+		val message = naaradReader(mySocReader) ?: throw(JSONException("naaradGetDataOnlyEngine: JSON message is null"))
+		System.err.println("getdataonly: message = "+message)
+		//val message = naaradReader(mySocReader)
+                //if (message != null && message.contains("{")) {
+                if (message.contains("{")) {
+                    publishJSON(message, params)
+                }
             }
 
             naaradWriter(mySocWriter, "done")
-            mySoc.close()
+	    mySoc.close(); // WAS MISSING
         }
 
         private fun naaradGetData(
             keys: IntArray, params: Array<out XYMultipleSeriesDataset?>,
             getHistory: Boolean
         ) {
-            try {
-                var mySoc: Socket? = null
-                var tries = 0
-                val host = serverName ?: defaultServer ?: "raspberrypi"
-                val port = serverPort
-                while (tries < 10) {
-                    mySoc = naaradSocket(host, port)
-                    if (mySoc != null) break
-                    tries++
-                    val msg = "Connecting to $host:$port (try $tries/10)..."
-                    uiToast(msg, Gravity.BOTTOM)
-                    System.err.println(msg)
-                    SystemClock.sleep(500)
-                }
-                if (mySoc == null) uiToast(
-                    "Could not connect to $host:$port after 10 tries",
-                    Gravity.BOTTOM
-                )
-                else {
-                    if (getHistory) naaradGetDataHistoryEngine(keys, params, mySoc)
-                    else naaradGetDataOnlyEngine(keys, params, mySoc)
-                }
-            } catch (e: JSONException) {
-                System.err.println(e.message)
-                uiToast(e.message ?: "JSONException", Gravity.BOTTOM)
-            } catch (e: UnknownHostException) {
-                val msg =
-                    "Unknown host: " + serverName + ":" + serverPort.toString() + "\nCheck settings"
-                uiToast(msg, Gravity.BOTTOM)
-            } catch (e: IOException) {
-                val msg =
-                    "Error connecting to " + serverName + ":" + serverPort.toString() + "\nCheck settings"
-                uiToast(msg, Gravity.BOTTOM)
+            val host = NaaradUtils.serverName
+            val port = NaaradUtils.serverPort
+            val mySoc = openSocket(host ?: "", port) ?: return
+            //val mySoc = naaradSocket(host, port) ?: return
+            try
+	    {
+                if (getHistory) naaradGetDataHistoryEngine(keys, params, mySoc)
+		else            naaradGetDataOnlyEngine(keys, params, mySoc)
+
+            }
+	    catch (e: Exception)
+	    {
+                System.err.println("naaradGetData error: " + e.message)
+            }
+	    finally
+	    {
+                try { mySoc.close() } catch (ignored: Exception) {}
+                activeSocket = null
             }
         }
 
-        //
-        //----------------------------------------------------------------------------------------------
-        //
-        // private void naaradGetDataOnly(int[] keys,XYMultipleSeriesDataset[] params)
-        // {
-        //     try 
-        // 	{
-        // 	    String message="";
-        // 	    // Open the socket connection....
-        // 	    Socket mySoc;
-        // 	    int tries=0;
-        // 	    while ((mySoc = naaradSocket(getServerName(), getServerPort()))==null &&
-        // 		   tries < 10)
-        // 		{
-        // 		    tries++;
-        // 		    String msg="Wifi not yet connected..."+Integer.toString(tries);
-        // 		    uiToast(msg,Gravity.BOTTOM);
-        // 		    System.err.println(msg);
-        // 		    SystemClock.sleep(100);
-        // 		}
-        // 	    if (mySoc == null)
-        // 		uiToast("Wifi not connected after 10 tries"+Integer.toString(tries),Gravity.BOTTOM);
-        // 	    else
-        // 		{
-        // 		    //throw(new IOException("Wifi not connected after 10 tries"));
-        // 		    //Socket mySoc = new Socket(getServerName(), getServerPort());
-        // 		    //SystemClock.sleep(500);
-        // 		    PrintWriter mySocWriter = new PrintWriter(mySoc.getOutputStream(), true);
-        // 		    BufferedReader mySocReader = new BufferedReader(new InputStreamReader(mySoc.getInputStream()),100);
-        // 		    naaradWriter(mySocWriter,"SensorDataSync");
-        // 		    for (int i=0;i<keys.length;i++)
-        // 			{
-        // 			    //String msg=mkMessage("getcpkt "+Integer.toString(tt[i]));
-        // 			    String msg=("getcpkt "+Integer.toString(keys[i]));
-        // 			    //System.err.println("Sending: "+msg);
-        // 			    naaradWriter(mySocWriter, msg);
-        // 			    SystemClock.sleep(100);
-        // 			    //System.err.println("Receiving...");
-        // 			    if ((message = naaradReader(mySocReader)) == null)
-        // 				throw(new JSONException("JSON message is null"));
-        // 			    //System.err.println("Got: "+message);
-        // 			    //======================================================
-        // 			    String[] tokens = message.split(" ");
-        // 			    String jsonStr="";
-        // 			    for (int j=1;j<3;j++) jsonStr += tokens[j];
-        // 			    //...publish the data...
-        // 			    JSONObject json = new JSONObject(jsonStr);
-        // 			    if (json.getInt("rf_fail") == 0) // Indicates that the packet is valid
-        // 				{
-        // 				    // svolt  = (float)json.getDouble("node_v");
-        // 				    // rssi   = (float)json.getDouble("node_p");
-        // 				    nodeid = json.getInt("node_id");
-        // 				    //x0 =  new Date().getTime();
-        // 				    x0 =  json.getDouble("time");
-        // 				    double tt=new Date().getTime();
-        // 				    System.err.println(tt+" "+x0+" "+(tt-x0));
-        // 				    y0 = (float)json.getDouble("degc");
-        // 				    publishProgress(params[0].getSeriesAt(nodeID2Ndx.get(nodeid)));
-        // 				}
-        // 			    else
-        // 				throw(new JSONException("Packet invalid (rf_fail=1)"));
-        // 			    mMainActivityCallback.onDataArrival(jsonStr);
-        // 			}
-        // 		    //...close the socket.
-        // 		    naaradWriter(mySocWriter, "done");
-        // 		}
-        // 	}
-        //     catch (JSONException e) 
-        // 	{
-        // 	    //throw new RuntimeException(e);
-        // 	    System.err.println(e.getMessage());
-        // 	    uiToast(e.getMessage(),Gravity.BOTTOM);
-        // 	    cancel(true);
-        // 	}
-        //     catch (UnknownHostException e) 
-        // 	{
-        // 	    String msg = "Unknown host: "+getServerName()+":"+Integer.toString(getServerPort())+"\nCheck settings";
-        // 	    uiToast(msg,Gravity.BOTTOM);
-        // 	} 
-        //     catch (IOException e) 
-        // 	{
-        // 	    String msg = "Error connecting to "+getServerName()+":"+Integer.toString(getServerPort())+"\nCheck settings";
-        // 	    uiToast(msg,Gravity.BOTTOM);
-        // 	}
-        // }
-        //
-        //----------------------------------------------------------------------------------------------
-        //
-        private fun stopRecording(status: Boolean) {
-            stopRecording = status
-        }
-
-        //
-        //----------------------------------------------------------------------------------------------
-        //
-        fun finish() {
-            allDone = true
-        }
-
-        //
-        //----------------------------------------------------------------------------------------------
-        //
-        //	@Override protected String doInBackground(XYSeries... params) 
         override fun doInBackground(vararg params: XYMultipleSeriesDataset?): String {
             val retStr = "AllOK"
-            run {
-                allDone = false
-                nConnected = true
-                val keys: IntArray = getKeysAsArray(nodeID2Ndx!!)
+            allDone = false
+            nConnected = true
+            val keys = getKeysAsArray(nodeID2NdxMap)
 
-                naaradGetData(keys, params, true)
-                while (!allDone) {
-                    SystemClock.sleep(5000)
-                    if (!allDone) {
-                        naaradGetData(keys, params, false)
-                    }
+            naaradGetData(keys, params, true)
+
+            while (!allDone)// && !isCancelled)
+	    {
+//                if (!allDone && !isCancelled)
+		{
+                    naaradGetData(keys, params, false)
+                    SystemClock.sleep(60000)
                 }
             }
 

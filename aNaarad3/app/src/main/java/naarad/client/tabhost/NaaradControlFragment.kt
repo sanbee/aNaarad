@@ -205,8 +205,6 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
     //-----------------------------------------------------------------------------------------
     //
     fun lampHandler0(v: View) {
-        serverName = serverName
-        serverPort = serverPort
         currentToggleButton = (v) as ToggleButton
 
         //Log.i("Ctrl Server: ", serverName+":"+serverPort);
@@ -630,9 +628,10 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
         try {
             if (cmd.length == 0) return null
 
+            val host = NaaradUtils.serverName
+            val port = NaaradUtils.serverPort
 
-            //Log.i("Thread: ",serverName+":"+Integer.toString(serverPort));
-            client = Socket(serverName, serverPort)
+            client = Socket(host, port)
             printwriter = PrintWriter(client!!.getOutputStream(), true)
 
             printwriter!!.write(mkMessage("open"))
@@ -640,25 +639,23 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
             SystemClock.sleep(500)
 
             printwriter!!.write(mkMessage(cmd)) // write the message to output stream
-            // printwriter.write((cmd)); // write the message to output stream
             printwriter!!.flush()
             SystemClock.sleep(500)
 
             printwriter!!.write(mkMessage("done"))
             printwriter!!.flush()
 
-            //SystemClock.sleep(500);
             printwriter!!.close()
             client!!.close() // closing the connection
         } catch (e: UnknownHostException) {
             var msg = ""
             if (!isWifiConnected) msg = "Wifi is not connected.\n"
             msg =
-                msg + "Unknown host: " + serverName + ":" + serverPort.toString() + "\nCheck settings"
+                msg + "Unknown host: " + NaaradUtils.serverName + ":" + NaaradUtils.serverPort.toString() + "\nCheck settings"
             return msg
         } catch (e: IOException) {
             val msg =
-                "Error connecting to " + serverName + ":" + serverPort.toString() + "\nCheck settings"
+                "Error connecting to " + NaaradUtils.serverName + ":" + NaaradUtils.serverPort.toString() + "\nCheck settings"
             return msg
         }
         return ALL_WELL
