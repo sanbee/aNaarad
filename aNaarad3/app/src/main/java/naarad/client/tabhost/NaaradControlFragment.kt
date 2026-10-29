@@ -239,12 +239,14 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
             : SimpleOnGestureListener = object : SimpleOnGestureListener() {
         override fun onSingleTapUp(e: MotionEvent): Boolean {
             super.onSingleTapUp(e)
-            tempInDegC = !tempInDegC
-            val selItem = gDnDParams!!.selected_item!!
-            var tt = (selItem.getTag(R.integer.key0) as Number).toFloat()
-            var unit = selItem.getTag(R.integer.key1) as String?
-            val nodeid = selItem.tag as Int
-            if (unit === "C") {
+            val selItem = gDnDParams?.selected_item ?: return false
+
+            val rawTempObj = selItem.getTag(R.integer.key0)
+            var tt = (rawTempObj as? Number)?.toFloat() ?: 20.0f
+            var unit = (selItem.getTag(R.integer.key1) as? String) ?: "C"
+            val nodeid = (selItem.tag as? Number)?.toInt() ?: (selItem.tag?.toString()?.toIntOrNull() ?: 1)
+
+            if (unit == "C") {
                 tt = tt * 9.0f / 5.0f + 32.0f
                 unit = "F"
             } else {
@@ -264,6 +266,12 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
             val selItem = gDnDParams!!.selected_item!!
             gDnDParams!!.touchFlag_p = true
             selItem.background?.alpha = 80
+
+            val lp = selItem.layoutParams as? MarginLayoutParams
+            gDnDParams!!.initial_left = if (lp != null && lp.leftMargin > 0) lp.leftMargin else selItem.left
+            gDnDParams!!.initial_top = if (lp != null && lp.topMargin > 0) lp.topMargin else selItem.top
+            gDnDParams!!.raw_touch_x0 = e.rawX
+            gDnDParams!!.raw_touch_y0 = e.rawY
 
             selItem.parent?.requestDisallowInterceptTouchEvent(true)
             myApp!!.swipeState = false
@@ -305,6 +313,12 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
 
             bulbView?.setBackgroundColor(Color.GREEN)
             bulbView?.background?.alpha = 100
+
+            val lp = selItem.layoutParams as? MarginLayoutParams
+            gDnDParams?.initial_left = if (lp != null && lp.leftMargin > 0) lp.leftMargin else selItem.left
+            gDnDParams?.initial_top = if (lp != null && lp.topMargin > 0) lp.topMargin else selItem.top
+            gDnDParams?.raw_touch_x0 = e.rawX
+            gDnDParams?.raw_touch_y0 = e.rawY
 
             selItem.parent?.requestDisallowInterceptTouchEvent(true)
             myApp?.swipeState = false
@@ -450,10 +464,8 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
         for (i in tempBubbleArr.indices) {
             tempBubbleArr[i]!!.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12f)
             tempBubbleArr[i]!!.setTag(R.integer.key1, "C")
-            //tempBubbleArr[0].setTag(1); // Set the default tag value
+            tempBubbleArr[i]!!.setTag(R.integer.key0, 20.0f)
             tempBubbleArr[i]!!.tag = keys[i] // Set the default tag value
-            //setBubbleValue(1,20.63f);
-            //tempBubbleArr[0].setText(Html.fromHtml("<p><b>21.63C</b><font size =\"50\" color=\"#0066FF\"></font></p>"));
             tempBubbleArr[i]!!.setTextColor(Color.parseColor("white"))
         }
 

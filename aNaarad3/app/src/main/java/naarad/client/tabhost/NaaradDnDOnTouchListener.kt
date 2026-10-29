@@ -42,92 +42,25 @@ class NaaradDnDOnTouchListener(//private View selected_item=null;
     }
 
     fun containerOnTouch(v: View?, event: MotionEvent, touchFlag_l: Boolean): Boolean {
-        val w: Int
-        val h: Int
+        if (v == null || !touchFlag_l) return false
 
+        val deltaX = (event.rawX - gDnDParams.raw_touch_x0).toInt()
+        val deltaY = (event.rawY - gDnDParams.raw_touch_y0).toInt()
 
-        // if ((ImageView)v != null) 
-        //     {
-        // 	Drawable drawable = ((ImageView)v).getDrawable();
+        val x = gDnDParams.initial_left + deltaX
+        val y = gDnDParams.initial_top + deltaY
 
-        // 	Rect imageBounds = drawable.getBounds();
+        val oX = myApp.dpToPixel(mySizeXDP)
+        val oY = myApp.dpToPixel(mySizeYDP)
 
-        // 	//original height and width of the bitmap
-        // 	int intrinsicHeight = drawable.getIntrinsicHeight();
-        // 	int intrinsicWidth = drawable.getIntrinsicWidth();
-
-        // 	//height and width of the visible (scaled) image
-        // 	int scaledHeight = imageBounds.height();
-        // 	int scaledWidth = imageBounds.width();
-
-        // 	//Find the ratio of the original image to the scaled image
-        // 	//Should normally be equal unless a disproportionate scaling
-        // 	//(e.g. fitXY) is used.
-        // 	float heightRatio = intrinsicHeight / scaledHeight;
-        // 	float widthRatio = intrinsicWidth / scaledWidth;
-
-        // 	System.err.println("hr,wr:"+heightRatio+" "+widthRatio);
-        //     }
-
-
-        //	if ((touchFlag_l==true) && (selected_item != null))
-        if ((touchFlag_l == true) && (v != null)) {
-            //System.err.println("Display If  Part ::->"+touchFlag_l);
-            when (event.actionMasked) {
-                MotionEvent.ACTION_MOVE -> {
-                    var x: Int
-                    var y: Int
-                    val pX: Int
-                    val pY: Int
-                    var oX = 0
-                    var oY = 0
-                    val iX: Int
-                    val iY: Int
-                    var dx: Int
-                    var dy: Int
-                    pX = event.x.toInt()
-                    pY = event.y.toInt()
-
-                    // w=selected_item.getHeight();
-                    // h=selected_item.getWidth();
-                    w = v.height
-                    h = v.width
-                    oX = myApp.dpToPixel(mySizeXDP) //(int)(mySizeXDP*myApp.densityDpi);//160.0);
-                    oY = myApp.dpToPixel(mySizeYDP) //(int)(mySizeYDP*myApp.densityDpi);//160.0);
-
-                    val lp = v.layoutParams as? MarginLayoutParams
-                    iX = if (lp != null && lp.leftMargin > 0) lp.leftMargin else v.left
-                    iY = if (lp != null && lp.topMargin > 0) lp.topMargin else v.top
-
-                    dx = -(pX - gDnDParams.longPress_x)
-                    dy = -(pY - gDnDParams.longPress_y)
-
-                    x = iX - dx
-                    y = iY - dy
-
-
-                    // System.err.println("M Display Here X Value-->"+(x)
-                    // 		   +" Px:"+pX+" deX:"+(pX - gDnDParams.longPress_x)
-                    // 		   +" R:"+iX+" dx:"+dx+" X:"+(iX - dx));
-                    // System.err.println("M Display Here Y Value-->"+(y)
-                    // 		   +" Py:"+pY+" deY:"+(pY - gDnDParams.longPress_y)
-                    // 		   +" T:"+iY+" dy:"+dy+" Y:"+(iY - dy));
-                    val fragment = (NaaradAbstractFragment.mActivity as? androidx.fragment.app.FragmentActivity)?.supportFragmentManager
-                        ?.fragments?.firstOrNull { it is NaaradControlFragment } as? NaaradControlFragment
-                    if (fragment != null) {
-                        fragment.moveIconAndTextTogether(v, x, y, oX, oY)
-                    } else {
-                        gDnDParams.moveView(v, x, y, oX, oY, 1.0f, 1.0f)
-                    }
-                }
-
-                else -> {}
-            }
+        val fragment = (NaaradAbstractFragment.mActivity as? androidx.fragment.app.FragmentActivity)?.supportFragmentManager
+            ?.fragments?.firstOrNull { it is NaaradControlFragment } as? NaaradControlFragment
+        if (fragment != null) {
+            fragment.moveIconAndTextTogether(v, x, y, oX, oY)
+        } else {
+            gDnDParams.moveView(v, x, y, oX, oY, 1.0f, 1.0f)
         }
-        // else
-        //     {
-        // 	System.err.println("Display Else Part ::->"+touchFlag);
-        //     }               
+
         return true
     }
 

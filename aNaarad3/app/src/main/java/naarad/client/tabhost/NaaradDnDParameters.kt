@@ -11,6 +11,10 @@ class NaaradDnDParameters {
     // The location at which longPress event happened.
     var longPress_x: Int = 0
     var longPress_y: Int = 0
+    var initial_left: Int = 0
+    var initial_top: Int = 0
+    var raw_touch_x0: Float = 0f
+    var raw_touch_y0: Float = 0f
 
     // Set in GestureDetector on LongPress and used in OnTouchListener
     // ACTION_MOVE to call containerOnTouch() to do the actual move of
