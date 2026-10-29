@@ -1,6 +1,8 @@
 package naarad.client.tabhost
 
 import android.graphics.Color
+import android.view.ViewGroup.MarginLayoutParams
+import com.sanbee.anaarad.R
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.View
@@ -93,23 +95,15 @@ class NaaradDnDOnTouchListener(//private View selected_item=null;
                     oX = myApp.dpToPixel(mySizeXDP) //(int)(mySizeXDP*myApp.densityDpi);//160.0);
                     oY = myApp.dpToPixel(mySizeYDP) //(int)(mySizeYDP*myApp.densityDpi);//160.0);
 
-                    // iX=selected_item.getRight();
-                    // iY=selected_item.getTop();
-                    iX = v.right
-                    iY = v.top
+                    val lp = v.layoutParams as? MarginLayoutParams
+                    iX = if (lp != null && lp.leftMargin > 0) lp.leftMargin else v.left
+                    iY = if (lp != null && lp.topMargin > 0) lp.topMargin else v.top
 
-                    x = pX - oX + iX
-                    y = pY - oY + iY
-
-                    dx = oX * 2 - pX
-                    dy = oY - pY
-                    //dx = -pX;      dy = -pY;
                     dx = -(pX - gDnDParams.longPress_x)
                     dy = -(pY - gDnDParams.longPress_y)
-                    val scalex = 800.0f / 1024.0f
-                    val scaley = 480.0f / 768.0f
-                    x = (iX - dx - 54 * scalex).toInt()
-                    y = (iY - dy - 24 * scaley).toInt()
+
+                    x = iX - dx
+                    y = iY - dy
 
 
                     // System.err.println("M Display Here X Value-->"+(x)
@@ -162,23 +156,28 @@ class NaaradDnDOnTouchListener(//private View selected_item=null;
             }
 
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                val wasDragging = gDnDParams.touchFlag_p
                 gDnDParams.touchFlag_p = false
                 v.parent?.requestDisallowInterceptTouchEvent(false)
 
                 if (v is ImageView) {
-                    v.setAlpha(255)
                     v.setBackgroundColor(Color.TRANSPARENT)
+                    v.setAlpha(255)
                 } else if (v is TextView) {
                     v.background?.alpha = 255
                 }
 
-                val lp = v.layoutParams as? android.view.ViewGroup.MarginLayoutParams
-                val left = lp?.leftMargin ?: v.left
-                val top = lp?.topMargin ?: v.top
+                val tag = (v.getTag(R.integer.key0) as? Int) ?: -1
                 NaaradAbstractFragment.mActivity?.let { activity ->
                     val fragment = (activity as? androidx.fragment.app.FragmentActivity)?.supportFragmentManager
                         ?.fragments?.firstOrNull { it is NaaradControlFragment } as? NaaradControlFragment
-                    fragment?.saveSingleViewPosition(v, left, top)
+                    if (tag >= 0) fragment?.resetBulbHighlight(tag)
+                    if (wasDragging) {
+                        val lp = v.layoutParams as? android.view.ViewGroup.MarginLayoutParams
+                        val left = lp?.leftMargin ?: v.left
+                        val top = lp?.topMargin ?: v.top
+                        fragment?.saveSingleViewPosition(v, left, top)
+                    }
                 }
 
                 //System.err.println("Drop pos.: $left $top")

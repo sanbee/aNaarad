@@ -299,11 +299,12 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
             super.onLongPress(e)
             val selItem = gDnDParams?.selected_item ?: return
             gDnDParams?.touchFlag_p = true
-            if (selItem is ImageView) {
-                selItem.setAlpha(100)
-                selItem.setBackgroundColor(Color.GREEN)
-            }
-            selItem.background?.alpha = 100
+
+            val tag = (selItem.getTag(R.integer.key0) as? Int) ?: 0
+            val bulbView = bulbArr.getOrNull(tag)
+
+            bulbView?.setBackgroundColor(Color.GREEN)
+            bulbView?.background?.alpha = 100
 
             selItem.parent?.requestDisallowInterceptTouchEvent(true)
             myApp?.swipeState = false
@@ -577,6 +578,15 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
         }
         getRetainInstance()
         System.err.println("From NCF::onResume")
+    }
+
+    fun resetBulbHighlight(tag: Int) {
+        if (tag >= 0 && tag < bulbArr.size) {
+            bulbArr[tag]?.setBackgroundColor(Color.TRANSPARENT)
+            bulbArr[tag]?.background?.alpha = 255
+            bulbTextArr.getOrNull(tag)?.setBackgroundColor(Color.TRANSPARENT)
+            bulbTextArr.getOrNull(tag)?.background?.alpha = 255
+        }
     }
 
     fun moveIconAndTextTogether(v: View, x: Int, y: Int, w: Int, h: Int) {
