@@ -128,7 +128,8 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
             val bubbleID = mapNodeID2Ndx(nodeid)
             if (bubbleID < 0 || bubbleID >= tempBubbleArr.size) return null
             val tv = tempBubbleArr[bubbleID] ?: return null
-            val unit = (tv.getTag(R.integer.key1) as? String) ?: "C"
+            val unit = getPreference("bubbleUnit$nodeid", "C") ?: "C"
+            tv.setTag(R.integer.key1, unit)
             var displayTemp = temp
             if (unit == "F") displayTemp = displayTemp * 9.0f / 5.0f + 32.0f
 
@@ -242,17 +243,15 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
             val selItem = (gDnDParams?.selected_item as? TextView) ?: return false
 
             val textStr = selItem.text?.toString() ?: ""
+            val nodeid = (selItem.tag as? Number)?.toInt()
+                ?: (selItem.tag?.toString()?.toIntOrNull() ?: 1)
+
             var unit = (selItem.getTag(R.integer.key1) as? String)
-            if (unit == null) {
-                unit = if (textStr.endsWith("F", ignoreCase = true)) "F" else "C"
-            }
+                ?: getPreference("bubbleUnit$nodeid", "C") ?: "C"
 
             val numStr = textStr.replace(Regex("[^0-9.-]"), "")
             var tt = numStr.toFloatOrNull()
                 ?: ((selItem.getTag(R.integer.key0) as? Number)?.toFloat() ?: 20.0f)
-
-            val nodeid = (selItem.tag as? Number)?.toInt()
-                ?: (selItem.tag?.toString()?.toIntOrNull() ?: 1)
 
             if (unit == "C") {
                 tt = tt * 9.0f / 5.0f + 32.0f
@@ -262,6 +261,7 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
                 unit = "C"
             }
             selItem.setTag(R.integer.key1, unit)
+            setPreference("bubbleUnit$nodeid", unit)
             setBubbleValue(nodeid, tt)
 
             return false
@@ -470,11 +470,14 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
         tempBubbleArr[1] = thisView.findViewById<View?>(R.id.tv2) as TextView?
 
         for (i in tempBubbleArr.indices) {
-            tempBubbleArr[i]!!.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12f)
-            tempBubbleArr[i]!!.setTag(R.integer.key1, "C")
-            tempBubbleArr[i]!!.setTag(R.integer.key0, 20.0f)
-            tempBubbleArr[i]!!.tag = keys[i] // Set the default tag value
-            tempBubbleArr[i]!!.setTextColor(Color.parseColor("white"))
+            val tv = tempBubbleArr[i] ?: continue
+            val nodeid = keys[i]
+            val savedUnit = getPreference("bubbleUnit$nodeid", "C") ?: "C"
+            tv.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12f)
+            tv.setTag(R.integer.key1, savedUnit)
+            tv.setTag(R.integer.key0, 20.0f)
+            tv.tag = nodeid
+            tv.setTextColor(Color.parseColor("white"))
         }
 
 
