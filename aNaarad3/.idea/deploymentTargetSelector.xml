@@ -4,10 +4,10 @@
     <selectionStates>
       <SelectionState runConfigName="Naarad3">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2026-10-29T15:14:28.442697988Z">
+        <DropdownSelection timestamp="2026-10-29T16:57:22.597227001Z">
           <Target type="DEFAULT_BOOT">
             <handle>
-              <DeviceId pluginId="LocalEmulator" identifier="path=/home/sanjay/.android/avd/4.7_WXGA_API_27_Oreo_.avd" />
+              <DeviceId pluginId="LocalEmulator" identifier="path=/home/sanjay/.android/avd/Pixel_10.avd" />
             </handle>
           </Target>
         </DropdownSelection>

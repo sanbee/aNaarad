@@ -2,6 +2,7 @@ package naarad.client.tabhost
 
 import android.app.Activity
 import android.graphics.Color
+import android.graphics.Typeface
 import android.os.Bundle
 import android.os.SystemClock
 import android.text.Html
@@ -44,6 +45,10 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
     private var bulb1: ImageView? = null
     private var bulb2: ImageView? = null
     private var bulbArr: Array<ImageView?> = arrayOfNulls(3)
+    private var bulbText0: TextView? = null
+    private var bulbText1: TextView? = null
+    private var bulbText2: TextView? = null
+    private var bulbTextArr: Array<TextView?> = arrayOfNulls(3)
     private var tempBubbleArr: Array<TextView?> = arrayOfNulls(2)
 
     //    private TextView ttBulbArr;
@@ -170,21 +175,15 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
     //-----------------------------------------------------------------------------------------
     //
     fun setBulbBG(v: View, on: Boolean) {
-        if (on) {
-            ((v) as ImageView).setImageDrawable(
-                mActivity0!!.resources.getDrawable(R.drawable.lamp_off)
-            )
-        } else {
-            ((v) as ImageView).setImageDrawable(
-                mActivity0!!.resources.getDrawable(R.drawable.lamp_on)
-            )
-            //v.setBackgroundColor(Color.YELLOW);
+        val imageView = (v as? ImageView) ?: (v.getTag(R.integer.key0)?.toString()?.toIntOrNull()?.let { bulbArr.getOrNull(it) })
+        imageView?.let { img ->
+            if (on) {
+                img.setImageDrawable(mActivity0!!.resources.getDrawable(R.drawable.lamp_off))
+            } else {
+                img.setImageDrawable(mActivity0!!.resources.getDrawable(R.drawable.lamp_on))
+            }
+            img.setBackgroundColor(Color.TRANSPARENT)
         }
-        v.setBackgroundColor(Color.TRANSPARENT)
-
-
-        // if (on) v.setBackgroundColor(Color.TRANSPARENT);
-        // else    v.setBackgroundColor(Color.YELLOW);
     }
 
     //
@@ -283,39 +282,33 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
             : SimpleOnGestureListener = object : SimpleOnGestureListener() {
         override fun onSingleTapUp(e: MotionEvent): Boolean {
             super.onSingleTapUp(e)
-            val selItem = gDnDParams!!.selected_item!!
-            val tag = (selItem.getTag(R.integer.key0)) as Int
-            val on = lampArr[tag]!!.isChecked
-            setBulbBG(selItem, on)
-            lampArr[tag]!!.isChecked = !on
-            lampHandler0(lampArr[tag]!!)
+            val selItem = gDnDParams?.selected_item ?: return false
+            val tag = (selItem.getTag(R.integer.key0) as? Int) ?: 0
+            if (tag >= 0 && tag < lampArr.size && lampArr[tag] != null) {
+                val on = lampArr[tag]!!.isChecked
+                val bulbView = bulbArr[tag] ?: selItem
+                setBulbBG(bulbView, on)
+                lampArr[tag]!!.isChecked = !on
+                lampHandler0(lampArr[tag]!!)
+            }
             return false
         }
 
         override fun onLongPress(e: MotionEvent) {
             toast("DnD activated", Gravity.TOP or Gravity.RIGHT)
             super.onLongPress(e)
-            val selItem = gDnDParams!!.selected_item!!
-            gDnDParams!!.touchFlag_p = true
-            (selItem as ImageView).setAlpha(100)
-
-            selItem.setBackgroundColor(Color.GREEN)
+            val selItem = gDnDParams?.selected_item ?: return
+            gDnDParams?.touchFlag_p = true
+            if (selItem is ImageView) {
+                selItem.setAlpha(100)
+                selItem.setBackgroundColor(Color.GREEN)
+            }
             selItem.background?.alpha = 100
 
             selItem.parent?.requestDisallowInterceptTouchEvent(true)
-            myApp!!.swipeState = false
-            gDnDParams!!.longPress_x = e.x.toInt()
-            gDnDParams!!.longPress_y = e.y.toInt()
-
-            val loc = IntArray(2)
-            selItem.getLocationOnScreen(loc)
-            // System.err.println(
-            //     ("On screen (x,y): "
-            //             + loc[0] + " " + loc[1] + " "
-            //             + selItem.right + " " + selItem.top + " "
-            //             + gDnDParams!!.longPress_x + " " + gDnDParams!!.longPress_y)
-            // )
-
+            myApp?.swipeState = false
+            gDnDParams?.longPress_x = e.x.toInt()
+            gDnDParams?.longPress_y = e.y.toInt()
             return
         }
     }
@@ -392,18 +385,12 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
         // Set up the handlers to handle gestures (SingleTap,
         // LongPress) on the icons for the lamps.
         for (i in bulbArr.indices) {
-            // if (i==1) 
-            //     {
-            // 	ttBulbArr.setTag(R.integer.key0,i);
-            // 	ttBulbArr.setTag(R.integer.key1,"0");
-            // 	ttBulbArr.setOnTouchListener(onTouchListener);
-            //     }
-            // else 
-            run {
-                bulbArr[i]!!.setTag(R.integer.key0, i)
-                bulbArr[i]!!.setTag(R.integer.key1, "0")
-                bulbArr[i]!!.setOnTouchListener(onTouchListener)
-            }
+            bulbArr[i]?.setTag(R.integer.key0, i)
+            bulbArr[i]?.setTag(R.integer.key1, "0")
+            bulbArr[i]?.setOnTouchListener(onTouchListener)
+            bulbTextArr[i]?.setTag(R.integer.key0, i)
+            bulbTextArr[i]?.setTag(R.integer.key1, "0")
+            bulbTextArr[i]?.setOnTouchListener(onTouchListener)
         }
     }
 
@@ -439,9 +426,22 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
         bulbArr[1] = bulb1
 
 
-        //ttBulbArr  =  (TextView) thisView.findViewById(R.id.iv2); 
         bulb2 = thisView.findViewById<View?>(R.id.iv3) as ImageView?
         bulbArr[2] = bulb2
+
+        bulbText0 = thisView.findViewById<View?>(R.id.myImageViewText1) as? TextView
+        bulbTextArr[0] = bulbText0
+        bulbText1 = thisView.findViewById<View?>(R.id.myImageViewText2) as? TextView
+        bulbTextArr[1] = bulbText1
+        bulbText2 = thisView.findViewById<View?>(R.id.myImageViewText3) as? TextView
+        bulbTextArr[2] = bulbText2
+
+        for (i in bulbTextArr.indices) {
+            bulbTextArr[i]?.text = "${i + 1}"
+            bulbTextArr[i]?.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f)
+            bulbTextArr[i]?.setTextColor(Color.parseColor("#795548"))
+            bulbTextArr[i]?.setTypeface(Typeface.DEFAULT_BOLD)
+        }
 
         tempBubbleArr[0] = thisView.findViewById<View?>(R.id.tv1) as TextView?
         tempBubbleArr[1] = thisView.findViewById<View?>(R.id.tv2) as TextView?
@@ -473,12 +473,16 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
         val oY = myApp!!.dpToPixel(20)
         val oX = oY
 
+        val textOffset = myApp?.dpToPixel(5) ?: 5
         for (i in bulbArr.indices) {
             val bulb = bulbArr[i] ?: continue
             val x = getPreference("bulbX$i", -1)
             val y = getPreference("bulbY$i", -1)
             if (x >= 0 && y >= 0) {
                 gDnDParams?.moveView(bulb, x, y, oX, oY, 1.0f, 1.0f)
+                bulbTextArr[i]?.let { txt ->
+                    gDnDParams?.moveView(txt, x + textOffset, y + textOffset, oX, oY, 1.0f, 1.0f)
+                }
             }
         }
 
@@ -575,11 +579,28 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
         System.err.println("From NCF::onResume")
     }
 
-    fun saveSingleViewPosition(v: View, x: Int, y: Int) {
+    fun moveIconAndTextTogether(v: View, x: Int, y: Int, w: Int, h: Int) {
+        val textOffset = myApp?.dpToPixel(5) ?: 5
         for (i in bulbArr.indices) {
-            if (bulbArr[i] == v) {
+            if (bulbArr[i] == v || bulbTextArr[i] == v) {
+                bulbArr[i]?.let { gDnDParams?.moveView(it, x, y, w, h, 1.0f, 1.0f) }
+                bulbTextArr[i]?.let { gDnDParams?.moveView(it, x + textOffset, y + textOffset, w, h, 1.0f, 1.0f) }
+                return
+            }
+        }
+        gDnDParams?.moveView(v, x, y, w, h, 1.0f, 1.0f)
+    }
+
+    fun saveSingleViewPosition(v: View, x: Int, y: Int) {
+        val oY = myApp?.dpToPixel(20) ?: 20
+        val oX = oY
+        val textOffset = myApp?.dpToPixel(5) ?: 5
+        for (i in bulbArr.indices) {
+            if (bulbArr[i] == v || bulbTextArr[i] == v) {
                 setPreference("bulbX$i", x)
                 setPreference("bulbY$i", y)
+                bulbArr[i]?.let { gDnDParams?.moveView(it, x, y, oX, oY, 1.0f, 1.0f) }
+                bulbTextArr[i]?.let { gDnDParams?.moveView(it, x + textOffset, y + textOffset, oX, oY, 1.0f, 1.0f) }
                 return
             }
         }

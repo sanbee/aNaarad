@@ -118,10 +118,13 @@ class NaaradDnDOnTouchListener(//private View selected_item=null;
                     // System.err.println("M Display Here Y Value-->"+(y)
                     // 		   +" Py:"+pY+" deY:"+(pY - gDnDParams.longPress_y)
                     // 		   +" T:"+iY+" dy:"+dy+" Y:"+(iY - dy));
-                    gDnDParams.moveView(
-                        v, x, y,
-                        oX, oY, 1.0f, 1.0f
-                    )
+                    val fragment = (NaaradAbstractFragment.mActivity as? androidx.fragment.app.FragmentActivity)?.supportFragmentManager
+                        ?.fragments?.firstOrNull { it is NaaradControlFragment } as? NaaradControlFragment
+                    if (fragment != null) {
+                        fragment.moveIconAndTextTogether(v, x, y, oX, oY)
+                    } else {
+                        gDnDParams.moveView(v, x, y, oX, oY, 1.0f, 1.0f)
+                    }
                 }
 
                 else -> {}
