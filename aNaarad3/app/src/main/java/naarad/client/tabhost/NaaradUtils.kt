@@ -223,12 +223,6 @@ object NaaradUtils {
 		//return charsRead;
 		return message;
 	    }
-	// catch (IOException e) 
-	// 	{
-	// 	    String msg = "Error connecting to "+getServerName()+":"+Integer.toString(getServerPort())+"\nCheck settings";
-	// 	    uiToast(msg,Gravity.BOTTOM);
-	// 	    return msg;
-	// 	}
 	catch (e: JSONException) 
 	    {
 		//throw new RuntimeException(e);
@@ -236,7 +230,7 @@ object NaaradUtils {
 		uiToast(e.message,Gravity.BOTTOM);
 		return "";
 	    }
-    };
+    }
 
 
     @Throws(IOException::class, UnknownHostException::class)

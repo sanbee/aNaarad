@@ -239,12 +239,20 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
             : SimpleOnGestureListener = object : SimpleOnGestureListener() {
         override fun onSingleTapUp(e: MotionEvent): Boolean {
             super.onSingleTapUp(e)
-            val selItem = gDnDParams?.selected_item ?: return false
+            val selItem = (gDnDParams?.selected_item as? TextView) ?: return false
 
-            val rawTempObj = selItem.getTag(R.integer.key0)
-            var tt = (rawTempObj as? Number)?.toFloat() ?: 20.0f
-            var unit = (selItem.getTag(R.integer.key1) as? String) ?: "C"
-            val nodeid = (selItem.tag as? Number)?.toInt() ?: (selItem.tag?.toString()?.toIntOrNull() ?: 1)
+            val textStr = selItem.text?.toString() ?: ""
+            var unit = (selItem.getTag(R.integer.key1) as? String)
+            if (unit == null) {
+                unit = if (textStr.endsWith("F", ignoreCase = true)) "F" else "C"
+            }
+
+            val numStr = textStr.replace(Regex("[^0-9.-]"), "")
+            var tt = numStr.toFloatOrNull()
+                ?: ((selItem.getTag(R.integer.key0) as? Number)?.toFloat() ?: 20.0f)
+
+            val nodeid = (selItem.tag as? Number)?.toInt()
+                ?: (selItem.tag?.toString()?.toIntOrNull() ?: 1)
 
             if (unit == "C") {
                 tt = tt * 9.0f / 5.0f + 32.0f

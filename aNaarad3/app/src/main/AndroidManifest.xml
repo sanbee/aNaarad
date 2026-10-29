@@ -15,6 +15,7 @@
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:theme="@style/Theme.AppCompat.Light.DarkActionBar"
+        android:usesCleartextTraffic="true"
         android:supportsRtl="true">
         
         <!-- CRITICAL FIX: Added android:exported="true" so Android 12+ can launch it -->
