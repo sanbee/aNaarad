@@ -2,9 +2,9 @@
 <project version="4">
   <component name="deploymentTargetSelector">
     <selectionStates>
-      <SelectionState runConfigName="app">
+      <SelectionState runConfigName="Naarad3">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2026-10-28T00:54:28.476098731Z">
+        <DropdownSelection timestamp="2026-10-29T15:14:28.442697988Z">
           <Target type="DEFAULT_BOOT">
             <handle>
               <DeviceId pluginId="LocalEmulator" identifier="path=/home/sanjay/.android/avd/4.7_WXGA_API_27_Oreo_.avd" />

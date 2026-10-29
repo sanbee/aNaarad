@@ -74,178 +74,54 @@ import java.util.Random
 class NaaradPlotFragment : NaaradAbstractFragment() {
     private val mDataset: XYMultipleSeriesDataset = XYMultipleSeriesDataset()
     private val mRenderer: XYMultipleSeriesRenderer = XYMultipleSeriesRenderer()
-
-    //    private XYSeriesRenderer mCurrentRenderer;
-    private val mDateFormat: String? = null
-    private val mNewSeries: Button? = null
-    private val mAdd: Button? = null
-    private val mChartView: GraphicalView? = null
     private var mTimeChartView: GraphicalView? = null
-    private val index = 0
-
 
     private var apiLevel = 0
-
-    //    private Socket client;
-    //private PrintWriter printwriter;
-    private val textField: EditText? = null
-
-    //private ToggleButton plotButton;
-    private val messsage: String? = null
-
-    //private DynamicDataSource dataSource;
-    private val myThread: Thread? = null
     var myApp: NaaradApp? = null
 
-    private val series0: XYSeries? = null //, series1;
-
-    //private ArrayList<XYSeries> seriesList;
-    private val renderer0: XYSeriesRenderer? = null //,renderer1;
-
-    //protected Update mUpdateTask0, mUpdateTask1;
     protected var mSensorDataSource: SensorDataSource? = null
-
-    //protected SensorDataSourceSim mSensorDataSource;
-    //protected ArrayList<Update> TaskList;
     private var nConnected = false
     var mMainActivityCallback: nPlotDataArrivalListener? = null
 
-    private var myPlotter: NaaradPlotter? = null
-    private var nSDS: NaaradSensorDataSource? = null
-
-    // The container Activity must implement this interface so the frag can deliver messages
     interface nPlotDataArrivalListener {
         /** Called by NaaradPlotFragment when OTA RF data arrives  */
         fun onDataArrival(json: String?)
     }
 
-    private val receiver: BroadcastReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent) {
-            val msg = intent.getBundleExtra("RFPacket")
-            val jsonStr = msg!!.getStringArrayList("JSONPackets")
-            Log.i("BCR:", "Got it!")
-        }
-    }
-
-    //
-    //-----------------------------------------------------------------------------------------
-    //
-    //    @Override public void onViewCreated(View v, Bundle b) 
-    // @Override public void onActivityCreated(Bundle b) 
-    // {
-    // 	//super.onViewCreated(v,b);
-    // 	super.onActivityCreated(b);
-    // 	TextView tabLabel;
-    // 	//TabHost myTabHost = (TabHost) mView.findViewById(android.R.id.tabhost);
-    // 	TabHost myTabHost = ((MainActivity)getActivity()).getTabHost();
-    // 	if (myTabHost == null)
-    // 	    System.err.println("tabhost == null");
-    // 	else
-    // 	    {
-    // 		tabLabel = (TextView) myTabHost.getTabWidget().getChildAt(1).findViewById(android.R.id.title); 
-    // 		tabLabel.setText("Sensors.");
-    // 	    }
-    // }
-    //
-    //-----------------------------------------------------------------------------------------
-    //
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
         apiLevel = Build.VERSION.SDK_INT
 
-        //Log.i("API Level: ",android.os.Build.VERSION.RELEASE+" "+Integer.toString(apiLevel));
+        @Suppress("DEPRECATION")
         setHasOptionsMenu(true)
+        @Suppress("DEPRECATION")
         setRetainInstance(true)
-//	val myApp = getActivity().getApplication() as NaaradApp
 
-//	val myApp = (getActivity()?.getApplication() as? NaaradApp) 
-	val currentActivity = activity
-	if (currentActivity != null) {
-	myApp = currentActivity.application as NaaradApp
-	} else {
-	// Log an error or handle the missing activity state here safely
-	}
+        val currentActivity = activity
+        if (currentActivity != null) {
+            myApp = currentActivity.application as NaaradApp
+        }
 
         if (!recreateView(mView))
-	    mView = inflater.inflate(R.layout.activity_naarad_plot, container, false)
-	
+            mView = inflater.inflate(R.layout.activity_naarad_plot, container, false)
 
-        // This makes sure that the container activity has implemented
-        // the callback interface. If not, it throws an exception.
         try {
             mMainActivityCallback = activity as nPlotDataArrivalListener
         } catch (e: ClassCastException) {
             throw ClassCastException(
-                activity.toString()
-                        + " must implement mMainActivityCallback"
+                activity.toString() + " must implement mMainActivityCallback"
             )
         }
-
-        myPlotter = NaaradPlotter(resources.displayMetrics)
-        myPlotter!!.initMultiRenderer()
-        myPlotter!!.makeSeries(Color.GREEN)
-        myPlotter!!.makeSeries(Color.BLUE)
-        nSDS = NaaradSensorDataSource(
-            myPlotter!!.mDataset,
-            myPlotter!!.mRenderer,
-            myPlotter!!.mTimeChartView
-        )
-        myPlotter!!.makeChart(activity, mView!!)
 
         initMultiRenderer(mRenderer)
         makeSeries(mRenderer, mDataset, Color.GREEN)
         makeSeries(mRenderer, mDataset, Color.BLUE)
-        //
-        //--------------------------------------------------------------------------
-        //    
-        // plotButton = (ToggleButton)  mView.findViewById(R.id.plotButton); // reference to the send button
-        // plotButton.setChecked(false);
+
         nConnected = true
         startAllCharts(-1)
-        stopAllCharts(1)
-        startAllCharts(-1)
 
-        // Button press event listener
-        //plotButton.setOnClickListener(new View.OnClickListener() 
-        /*
-	View.OnClickListener plotButtonHandler = new View.OnClickListener() 
-	    {
-		public void onClick(View v) 
-		{
-		    android.support.v4.app.FragmentTransaction transaction=getActivity().getSupportFragmentManager().beginTransaction();
-		    Fragment f1 = (Fragment) NaaradControlFragment.newInstance("Naarad Control Fragment");
-		    
-		    // if (f1.getView() == null)
-		    // 	System.err.println("it's null!");
-		    // else
-		    // f1.getView().getBackground().setAlpha(100);
-
-		    
-		    transaction.add(R.id.plotRL, f1);
-		    transaction.commit();
-
-		    // boolean on = ((ToggleButton)v).isChecked();
-		    // if (on) 
-		    // 	{
-		    // 	    //makeChart(mRenderer,mDataset);
-		    // 	    nConnected=true;
-		    // 	    startAllCharts(-1);
-		    // 	}
-		    // else 
-		    // 	{
-		    // 	    nConnected=false;
-		    // 	    stopAllCharts(1);
-		    // 	}
-		    // ((ToggleButton)v).setChecked(nConnected);
-		}
-	    };
-	plotButton.setOnClickListener(plotButtonHandler);
-	*/
-        //
-        //--------------------------------------------------------------------------
-        //    
         return mView!!
     }
 
@@ -511,9 +387,9 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
 		uiToast("Packet invalid (rf_fail=1)",Gravity.BOTTOM);	
 		return;
 	    }
-            activity?.runOnUiThread {
+            // activity?.runOnUiThread {
                 mMainActivityCallback?.onDataArrival(jsonStr)
-            }
+            // }
         }
 
         private fun naaradGetDataHistoryEngine(
@@ -526,6 +402,7 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
             naaradWriter(mySocWriter, "SensorDataSync")
             SystemClock.sleep(100)
 
+	    var nPackets: Int=0
             for (i in keys.indices) {
                 if (allDone || isCancelled) break
                 val msg = "gethpkt " + keys[i].toString()
@@ -537,7 +414,6 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
                 doReDraw = true
 		var message=""
 //                while (!allDone && !isCancelled )
-		var nPackets: Int=0
 		while(!message.contains("PHINISHED"))
 		{
                     message = NaaradUtils.naaradReader(mySocReader)// ?: throw(JSONException("JSON message is null in naaradGetDataHistoryEngine()"))//break
@@ -554,10 +430,9 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
 			publishJSON(message, params)
                     }
                 }
-                activity?.runOnUiThread{
-		    reDraw()
-		}
+		//     reDraw()
             }
+	    if (nPackets > 0) reDraw()
             naaradWriter(mySocWriter, "done")
 	    mySoc.close();
         }
@@ -570,7 +445,7 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
             val mySocWriter = PrintWriter(mySoc.getOutputStream(), true)
             val mySocReader = BufferedReader(InputStreamReader(mySoc.getInputStream()), 100)
             naaradWriter(mySocWriter, "SensorDataSync")
-            SystemClock.sleep(50)
+            SystemClock.sleep(100)
 
             for (i in keys.indices) {
                 if (allDone || isCancelled) break
@@ -624,12 +499,10 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
 
             naaradGetData(keys, params, true)
 
-            while (!allDone)// && !isCancelled)
-	    {
-//                if (!allDone && !isCancelled)
-		{
+            while (!allDone) {
+                SystemClock.sleep(5000)
+                if (!allDone) {
                     naaradGetData(keys, params, false)
-                    SystemClock.sleep(60000)
                 }
             }
 
@@ -723,7 +596,29 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
             //     }
             super.onCancelled()
         }
-    } //============================================================================================================
+    }
+
+    companion object {
+        private var mView: View? = null
+
+        //
+        //-----------------------------------------------------------------------------------------
+        //
+        fun newInstanceNPF(sampleText: String?): NaaradPlotFragment {
+            val f = NaaradPlotFragment()
+
+            val b = Bundle()
+            b.putString("bString", sampleText)
+            f.setArguments(b)
+
+            return f
+        }
+    }
+}
+
+
+
+    //============================================================================================================
     //
     // A class to simulate data packets internally.  This is mainly
     // for use for testing the handling of data packets throughout the
@@ -893,21 +788,3 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
     // }
     //============================================================================================================
 
-
-    companion object {
-        private var mView: View? = null
-
-        //
-        //-----------------------------------------------------------------------------------------
-        //
-        fun newInstanceNPF(sampleText: String?): NaaradPlotFragment {
-            val f = NaaradPlotFragment()
-
-            val b = Bundle()
-            b.putString("bString", sampleText)
-            f.setArguments(b)
-
-            return f
-        }
-    }
-}
