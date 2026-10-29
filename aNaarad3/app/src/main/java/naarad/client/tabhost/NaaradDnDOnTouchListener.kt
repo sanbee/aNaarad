@@ -178,7 +178,7 @@ class NaaradDnDOnTouchListener(//private View selected_item=null;
                     fragment?.saveSingleViewPosition(v, left, top)
                 }
 
-                System.err.println("Drop pos.: $left $top")
+                //System.err.println("Drop pos.: $left $top")
                 myApp.swipeState = true
             }
         }

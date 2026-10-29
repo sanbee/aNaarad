@@ -69,7 +69,7 @@ object NaaradUtils {
         return prefs?.getString(name, defValue) ?: defValue
     }
 
-    val nodeID2NdxMap: HashMap<*, *>?
+    val nodeID2NdxMap: HashMap<Int?, Int?>
         get() {
             val map = HashMap<Int?, Int?>()
             map[1] = 0

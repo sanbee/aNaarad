@@ -457,7 +457,8 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
             val jsonStr = message.substring(jsonStart, jsonEnd + 1)
             val json = JSONObject(jsonStr)
             if (json.optInt("rf_fail", 0) == 0) {
-                nodeid = json.optInt("node_id", 1)
+		val nodeid: Int = json.optInt("node_id", 1)
+                //nodeid = json.optInt("node_id", 1)
                 var timestamp = json.optDouble("time", System.currentTimeMillis().toDouble())
                 if (timestamp > 0 && timestamp < 10_000_000_000.0) {
                     timestamp *= 1000.0
@@ -468,20 +469,48 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
                 val dateStr = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault())
                     .format(java.util.Date(x0.toLong()))
                 // Log.i("NaaradData", "Sensor Node: $nodeid | Time: $dateStr (raw: ${x0.toLong()}) | Temp: $y0 °C")
-                // System.err.println("NaaradData -> Node: $nodeid | Time: $dateStr | Temp: $y0 °C")
+		// System.err.println("NaaradData -> Node: $nodeid | Time: $dateStr | Temp: $y0 °C")
 
-                val seriesCount = params[0]?.seriesCount ?: 0
-                if (seriesCount > 0) {
-                    val ndx = nodeID2Ndx?.get(nodeid) ?: (Math.abs(nodeid) % seriesCount)
-                    val series = params[0]?.getSeriesAt(ndx)
-                    if (series != null) {
-                        activity?.runOnUiThread {
-                            addNewData(series, x0, y0)
-                            reDraw()
-                        }
-                    }
-                }
+                // val seriesCount = params[0]?.seriesCount ?: 0
+                // if (seriesCount > 0)
+		// {
+		//     val ndx = nodeID2Ndx?.get(nodeid) ?: (Math.abs(nodeid) % seriesCount)
+                //     val series = params[0]?.getSeriesAt(ndx)
+                //     //if (series != null)
+		//     {
+                //         //activity?.runOnUiThread
+		// 	{
+                //             //addNewData(series, x0, y0)
+                //             addNewData(series, x0, y0)
+                //             reDraw()
+                //         }
+                //     }
+                // }
+		// var n: Int? = null
+		// val map: HashMap<Int?, Int?> = NaaradUtils.nodeID2NdxMap
+		// addNewData(params[0].getSeriesAt(map[nodeid]),x0,y0);
+
+		var n: Int? = null
+		val map: HashMap<Int?, Int?> = NaaradUtils.nodeID2NdxMap
+
+		// 1. Get the index from the map. If it's null (nodeid not found), default to a safe index like 0
+		val seriesIndex: Int = map[nodeid] ?: 0
+
+		// 2. Safely get the series. If params[0] or the series is null, use an Elvis operator fallback or safe check.
+		val series: XYSeries? = params[0]?.getSeriesAt(seriesIndex)
+
+		// 3. Only call addNewData if the series was successfully found
+		if (series != null)
+		    addNewData(series, x0, y0)
+		else
+		    System.err.println("Error: Could not find XYSeries for nodeid $nodeid")
+		reDraw()
             }
+	    else
+	    {
+		uiToast("Packet invalid (rf_fail=1)",Gravity.BOTTOM);	
+		return;
+	    }
             activity?.runOnUiThread {
                 mMainActivityCallback?.onDataArrival(jsonStr)
             }
@@ -517,18 +546,20 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
                     if (message.contains("PHINISHED")) {
                         Log.i("NaaradData", "=== Completed Historical Data for Sensor Node ${keys[i]} === "+nPackets)
                         System.err.println("=== Completed Historical Data for Sensor Node ${keys[i]} === " + nPackets)
-                        break
+//                        break
                     }
                     //if (message.contains("{"))
 		    if (!message.contains("PHINISHED"))
 		    {
-			//System.err.println("=== Historical Data for Sensor Node ${keys[i]} ${message} ===\n")
-                       // publishJSON(message, params)
+			publishJSON(message, params)
                     }
                 }
-                activity?.runOnUiThread { reDraw() }
+                activity?.runOnUiThread{
+		    reDraw()
+		}
             }
             naaradWriter(mySocWriter, "done")
+	    mySoc.close();
         }
 
         private fun naaradGetDataOnlyEngine(
@@ -617,6 +648,7 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
             thisSeries.add(x, y)
 
             val n = thisSeries.itemCount
+
             if (n > 1) {
                 val xMaxVal = thisSeries.getX(n - 1)
                 val xMinVal = thisSeries.getX(0)
@@ -628,7 +660,7 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
 
         protected fun reDraw() {
             if (doReDraw && mTimeChartView != null && !stopRecording) {
-                activity?.runOnUiThread {
+                activity?.runOnUiThread	{
                     mTimeChartView?.zoomReset()
                     mRenderer.yAxisMax = if (yMax > yMin) yMax + 0.5 else yMax + 2.0
                     mRenderer.yAxisMin = if (yMax > yMin) yMin - 0.5 else yMin - 2.0

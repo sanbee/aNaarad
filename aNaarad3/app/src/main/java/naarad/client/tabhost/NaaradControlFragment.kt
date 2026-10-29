@@ -308,12 +308,12 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
 
             val loc = IntArray(2)
             selItem.getLocationOnScreen(loc)
-            System.err.println(
-                ("On screen (x,y): "
-                        + loc[0] + " " + loc[1] + " "
-                        + selItem.right + " " + selItem.top + " "
-                        + gDnDParams!!.longPress_x + " " + gDnDParams!!.longPress_y)
-            )
+            // System.err.println(
+            //     ("On screen (x,y): "
+            //             + loc[0] + " " + loc[1] + " "
+            //             + selItem.right + " " + selItem.top + " "
+            //             + gDnDParams!!.longPress_x + " " + gDnDParams!!.longPress_y)
+            // )
 
             return
         }
@@ -564,11 +564,11 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
         super.onResume()
         makeSensorIcons(mView!!)
         (mView?.layoutParams as? MarginLayoutParams)?.let { lp ->
-            System.err.println(
-                "Offsets: " +
-                        lp.leftMargin + " " +
-                        lp.rightMargin
-            )
+            // System.err.println(
+            //     "Offsets: " +
+            //             lp.leftMargin + " " +
+            //             lp.rightMargin
+            // )
         }
         getRetainInstance()
         System.err.println("From NCF::onResume")
