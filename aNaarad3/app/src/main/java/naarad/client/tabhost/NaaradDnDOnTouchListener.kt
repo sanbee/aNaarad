@@ -166,7 +166,7 @@ class NaaradDnDOnTouchListener(//private View selected_item=null;
                     v.setAlpha(255)
                     v.setBackgroundColor(Color.TRANSPARENT)
                 } else if (v is TextView) {
-                    v.background.alpha = 100
+                    v.background?.alpha = 255
                 }
 
                 val lp = v.layoutParams as? android.view.ViewGroup.MarginLayoutParams

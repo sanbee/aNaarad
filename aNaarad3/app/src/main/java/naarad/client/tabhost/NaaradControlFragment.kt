@@ -149,6 +149,7 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
                 thisTV.text = tmp
                 thisTV.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12f)
                 thisTV.setTextColor(Color.parseColor("white"))
+                thisTV.background?.alpha = 255
             }
         }
 
