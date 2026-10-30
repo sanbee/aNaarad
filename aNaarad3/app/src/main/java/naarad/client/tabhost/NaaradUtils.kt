@@ -14,6 +14,9 @@ import java.net.Socket
 import java.net.UnknownHostException
 import org.json.JSONException
 import android.view.Gravity
+import android.security.NetworkSecurityPolicy
+import android.os.Build
+
 
 object NaaradUtils {
     var prefs: SharedPreferences? = null
@@ -250,4 +253,15 @@ object NaaradUtils {
             null
         }
     }
+
+    fun isCleartextPermittedForHost(host: String): Boolean {
+	return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            // Checks the exact host against your NetworkSecurityConfig XML rules
+            NetworkSecurityPolicy.getInstance().isCleartextTrafficPermitted(host)
+	} else {
+            // On API 23, it's a global true/false setting
+            NetworkSecurityPolicy.getInstance().isCleartextTrafficPermitted
+	}
+    }
+
 }

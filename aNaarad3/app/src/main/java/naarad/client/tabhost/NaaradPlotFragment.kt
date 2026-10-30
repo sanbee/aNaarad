@@ -88,6 +88,19 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
         fun onDataArrival(json: String?)
     }
 
+    // override fun onCreate(savedInstanceState: Bundle?) {
+    //     // Always call the superclass implementation first
+    //     super.onCreate(savedInstanceState)
+
+    // 	val gServerName=NaaradUtils.serverName
+    // 	val gServerPort=NaaradUtils.serverPort
+    // 	val permitted: Boolean=NaaradUtils.isCleartextPermittedForHost(gServerName!!)
+
+    // 	if (!permitted)
+    //         toast("Server settings: $gServerName:$gServerPort is not open for clear test traffic", Gravity.BOTTOM)
+    // }
+
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -167,7 +180,7 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
         val renderer0: XYSeriesRenderer = XYSeriesRenderer()
         renderer0.pointStyle = PointStyle.CIRCLE
         renderer0.isFillPoints = true
-        renderer0.lineWidth = 2f
+        renderer0.lineWidth = 4f
         //renderer0.setColor(Color.GREEN);
         renderer0.color = color
         multiRenderer.addSeriesRenderer(renderer0)
@@ -508,28 +521,74 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
 
             return retStr
         }
+	//
+	//--------------------------------------------------------------------------
+	//
+	fun addNewData(thisSeries: XYSeries, x: Double, y: Double)
+	{
+	    var xMax: Double;
+	    var xMin: Double;
+	    var dX: Double=0.0;
+	    val dT: Double=60000.0*300;
+	    val n :Int=thisSeries.itemCount;
+
+	    if (n > 0)
+	    {
+		// xMin = thisSeries.getX(0);
+		// xMax = thisSeries.getX(n-1);
+		// dX=xMax-xMin;
+		// if (dX > dT) thisSeries.remove(0);
+
+		if ((thisSeries.getX(n-1)-x) >= 300000)
+		    thisSeries.add(x,y);
+		else
+		{
+		    if (y != thisSeries.getY(n-1))
+		    {
+			if (y != MathHelper.NULL_VALUE)
+			{
+			    if (y > yMax) yMax = y;
+			    if (y < yMin) yMin = y;
+			}
+			//System.err.println("Val: "+y+" "+yMax+" "+yMin);
+			thisSeries.add(x, y);
+		    }
+		}
+	    }
+	    else
+		thisSeries.add(x, y);
+	}
 
         //
         //--------------------------------------------------------------------------
         //    
-        fun addNewData(thisSeries: XYSeries, x: Double, y: Double) {
-            if (y == MathHelper.NULL_VALUE) return
+        // fun addNewData_AI(thisSeries: XYSeries, x: Double, y: Double) {
+        //     if (y == MathHelper.NULL_VALUE) return
 
-            if (yMax == 0.0 || y > yMax) yMax = y
-            if (yMin == 100.0 || y < yMin) yMin = y
+	//     // if ((y != MathHelper.NULL_VALUE) && (y > yMax)) yMax = y;
+	//     // if ((y != MathHelper.NULL_VALUE) && (y < yMin)) yMin = y;
+        //     // if (yMax == 0.0 || y > yMax) yMax = y
+        //     // if (yMin == 100.0 || y < yMin) yMin = y
+        //     if (y > yMax) yMax = y
+        //     if (y < yMin) yMin = y
 
-            thisSeries.add(x, y)
+        //     thisSeries.add(x, y)
 
-            val n = thisSeries.itemCount
+        //     val n = thisSeries.itemCount
 
-            if (n > 1) {
-                val xMaxVal = thisSeries.getX(n - 1)
-                val xMinVal = thisSeries.getX(0)
-                val dX = xMaxVal - xMinVal
-                val dT = 1000.0 * 60 * 60 * 12 // 12 hours
-                if (dX > dT) thisSeries.remove(0)
-            }
-        }
+        //     if (n > 0) {
+        //         val xMaxVal = thisSeries.getX(n - 1)
+        //         val xMinVal = thisSeries.getX(0)
+        //         val dX = xMaxVal - xMinVal
+        //         val dT = 1000.0 * 60 * 60 * 12 // 12 hours
+        //         if (dX > dT) thisSeries.remove(0)
+        //     }
+	//     // if (n == 1)
+	//     // 	{
+	//     // 	    mRenderer.setXAxisMin(thisSeries.getX(0));
+	//     // 	    mRenderer.setXAxisMax(thisSeries.getX(0)+30000);
+	//     // 	}
+        // }
 
         protected fun reDraw() {
             if (doReDraw && mTimeChartView != null && !stopRecording) {
@@ -537,6 +596,8 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
                     mTimeChartView?.zoomReset()
                     mRenderer.yAxisMax = if (yMax > yMin) yMax + 0.5 else yMax + 2.0
                     mRenderer.yAxisMin = if (yMax > yMin) yMin - 0.5 else yMin - 2.0
+                    // mRenderer.yAxisMax = yMax + 2.0
+                    // mRenderer.yAxisMin = yMin - 2.0
                     mTimeChartView?.repaint()
                 }
             }
