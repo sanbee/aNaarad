@@ -35,17 +35,25 @@ class MainActivity : FragmentActivity(), NaaradPlotFragment.nPlotDataArrivalList
         }
     }
 
+    private var isBlinking = false
+
     override fun onDataArrival(json: String?) {
         if (json != null && gControlFragment != null) {
             b1 = gControlFragment!!.setSensorValues(json)
         }
 
-        gRunnableBlinker?.setText("Sensors .", Color.GREEN)
-        gUIHandler?.let { handler ->
-            gRunnableBlinker?.let { runnable ->
-                handler.post(runnable)
-                runnable.setText("Sensors  ", Color.WHITE)
-                handler.postDelayed(runnable, 250)
+        if (!isBlinking) {
+            isBlinking = true
+            gRunnableBlinker?.setText("Sensors .", Color.GREEN)
+            gUIHandler?.let { handler ->
+                gRunnableBlinker?.let { runnable ->
+                    handler.post(runnable)
+                    handler.postDelayed({
+                        runnable.setText("Sensors  ", Color.WHITE)
+                        handler.post(runnable)
+                        isBlinking = false
+                    }, 250)
+                }
             }
         }
     }

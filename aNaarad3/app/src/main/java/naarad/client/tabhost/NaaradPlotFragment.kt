@@ -1,7 +1,11 @@
 package naarad.client.tabhost
 
 import android.content.Context
+import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Paint
+import android.util.AttributeSet
+import android.util.TypedValue
 import android.os.AsyncTask
 import android.os.Build
 import android.os.Bundle
@@ -29,6 +33,43 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.HashMap
 import java.util.Locale
+
+class VerticalTitleLineChart @JvmOverloads constructor(
+    context: Context,
+    attrs: AttributeSet? = null,
+    defStyle: Int = 0
+) : LineChart(context, attrs, defStyle) {
+    var yAxisTitle: String = "Temperature (C)"
+    var yAxisTitleColor: Int = Color.WHITE
+    var yAxisTitleSize: Float = 10f
+
+    private val titlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        textAlign = Paint.Align.CENTER
+    }
+
+    override fun onDraw(canvas: Canvas) {
+        super.onDraw(canvas)
+        if (yAxisTitle.isNotEmpty()) {
+            titlePaint.color = yAxisTitleColor
+            titlePaint.textSize = TypedValue.applyDimension(
+                TypedValue.COMPLEX_UNIT_SP,
+                yAxisTitleSize,
+                resources.displayMetrics
+            )
+
+            canvas.save()
+            val x = TypedValue.applyDimension(
+                TypedValue.COMPLEX_UNIT_DIP,
+                10f,
+                resources.displayMetrics
+            )
+            val y = height / 2f
+            canvas.rotate(-90f, x, y)
+            canvas.drawText(yAxisTitle, x, y, titlePaint)
+            canvas.restore()
+        }
+    }
+}
 
 class NaaradPlotFragment : NaaradAbstractFragment() {
     private var mLineChart: LineChart? = null
@@ -89,6 +130,7 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
         chart.setPinchZoom(true)
         chart.setBackgroundColor(Color.argb(100, 50, 50, 50))
         chart.legend.textColor = Color.WHITE
+        chart.setExtraOffsets(20f, 0f, 0f, 0f)
 
         val xAxis = chart.xAxis
         xAxis.position = XAxis.XAxisPosition.BOTTOM
@@ -251,7 +293,7 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
 
                 activity?.runOnUiThread {
                     addNewData(seriesIndex, curX, curY)
-                    reDraw()
+                    reDrawThrottled()
                     mMainActivityCallback?.onDataArrival(jsonStr)
                 }
             } else {
@@ -292,7 +334,11 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
                     }
                 }
             }
-            if (nPackets > 0) reDraw()
+            if (nPackets > 0) {
+                activity?.runOnUiThread {
+                    reDrawForce()
+                }
+            }
             naaradWriter(mySocWriter, "done")
             mySoc.close()
         }
@@ -360,7 +406,21 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
             return retStr
         }
 
-        protected fun reDraw() {
+        @Volatile private var lastRedrawTime = 0L
+
+        protected fun reDrawThrottled() {
+            if (doReDraw && mLineChart != null && !stopRecording) {
+                val now = SystemClock.uptimeMillis()
+                if (now - lastRedrawTime >= 100L) {
+                    lastRedrawTime = now
+                    mLineChart?.data?.notifyDataChanged()
+                    mLineChart?.notifyDataSetChanged()
+                    mLineChart?.invalidate()
+                }
+            }
+        }
+
+        protected fun reDrawForce() {
             if (doReDraw && mLineChart != null && !stopRecording) {
                 mLineChart?.data?.notifyDataChanged()
                 mLineChart?.notifyDataSetChanged()
