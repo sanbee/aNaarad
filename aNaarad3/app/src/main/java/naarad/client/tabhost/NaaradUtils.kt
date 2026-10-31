@@ -246,7 +246,7 @@ object NaaradUtils {
         if (hostName.isNullOrEmpty() || port <= 0) return null
         return try {
             val clientSoc = Socket()
-            clientSoc.soTimeout = 1000 //Time out receiving 
+            clientSoc.soTimeout = 2000 //Time out receiving 
             clientSoc.connect(java.net.InetSocketAddress(hostName, port), 20000) // TimeOut for connection
             if (clientSoc.isConnected) clientSoc else null
         } catch (e: Exception) {

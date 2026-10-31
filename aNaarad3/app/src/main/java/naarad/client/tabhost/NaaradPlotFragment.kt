@@ -15,6 +15,7 @@ import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ToggleButton
 import com.github.mikephil.charting.charts.LineChart
 import com.github.mikephil.charting.components.XAxis
 import com.github.mikephil.charting.data.Entry
@@ -116,13 +117,55 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
         mLineChart = mView!!.findViewById(R.id.lineChart)
         mLineChart?.let { initChart(it) }
 
+        val unitBtn = mView!!.findViewById<ToggleButton>(R.id.unitButton)
+        val initialUnit = getPreference("plotUnit", "C") ?: "C"
+        unitBtn?.isChecked = (initialUnit == "F")
+        unitBtn?.setOnCheckedChangeListener { _, isChecked ->
+            val newUnit = if (isChecked) "F" else "C"
+            setPreference("plotUnit", newUnit)
+            switchPlotUnit(newUnit)
+        }
+
         nConnected = true
         startAllCharts(-1)
 
         return mView!!
     }
 
+    fun switchPlotUnit(unit: String) {
+        val chart = mLineChart as? VerticalTitleLineChart ?: return
+        val currentTitleUnit = if (chart.yAxisTitle.contains("F")) "F" else "C"
+        if (currentTitleUnit == unit) return
+
+        chart.yAxisTitle = "Temperature ($unit)"
+
+        val data = chart.data ?: return
+        for (i in 0 until data.dataSetCount) {
+            val dataSet = data.getDataSetByIndex(i) as? LineDataSet ?: continue
+            for (j in 0 until dataSet.entryCount) {
+                val entry = dataSet.getEntryForIndex(j)
+                val oldY = entry.y
+                val newY = if (unit == "F") {
+                    oldY * 9.0f / 5.0f + 32.0f
+                } else {
+                    (oldY - 32.0f) * 5.0f / 9.0f
+                }
+                entry.y = newY
+            }
+            dataSet.notifyDataSetChanged()
+        }
+
+        chart.axisLeft.resetAxisMaximum()
+        chart.axisLeft.resetAxisMinimum()
+        data.notifyDataChanged()
+        chart.notifyDataSetChanged()
+        chart.calculateOffsets()
+        chart.invalidate()
+    }
+
     private fun initChart(chart: LineChart) {
+        val chartUnit = getPreference("plotUnit", "C") ?: "C"
+        (chart as? VerticalTitleLineChart)?.yAxisTitle = "Temperature ($chartUnit)"
         chart.description.isEnabled = false
         chart.setTouchEnabled(true)
         chart.isDragEnabled = true
@@ -262,20 +305,20 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
             } catch (ignored: Exception) {}
         }
 
-        private fun openSocket(host: String, port: Int): Socket? {
-            if (host.isEmpty() || port <= 0) return null
-            return try {
-                val socket = Socket()
-                socket.soTimeout = 3000
-                socket.connect(java.net.InetSocketAddress(host, port), 2000)
-                if (socket.isConnected) {
-                    activeSocket = socket
-                    socket
-                } else null
-            } catch (e: Exception) {
-                null
-            }
-        }
+        // private fun openSocket(host: String, port: Int): Socket? {
+        //     if (host.isEmpty() || port <= 0) return null
+        //     return try {
+        //         val socket = Socket()
+        //         socket.soTimeout = 3000
+        //         socket.connect(java.net.InetSocketAddress(host, port), 2000)
+        //         if (socket.isConnected) {
+        //             activeSocket = socket
+        //             socket
+        //         } else null
+        //     } catch (e: Exception) {
+        //         null
+        //     }
+        // }
 
         private fun publishJSON(message: String) {
             val jsonStart = message.indexOf('{')
@@ -299,8 +342,15 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
                 val map: HashMap<Int?, Int?> = NaaradUtils.nodeID2NdxMap
                 val seriesIndex: Int = map[nodeid] ?: 0
 
+                val plotUnit = getPreference("plotUnit", "C") ?: "C"
+                val displayY = if (plotUnit == "F") {
+                    y0 * 9.0 / 5.0 + 32.0
+                } else {
+                    y0
+                }
+
                 val curX = x0
-                val curY = y0
+                val curY = displayY
 
                 activity?.runOnUiThread {
                     addNewData(seriesIndex, curX, curY)
