@@ -157,23 +157,29 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
 
         chart.axisRight.isEnabled = false
 
-        val dataSet1 = LineDataSet(ArrayList(), "Node 1").apply {
-            color = Color.GREEN
-            lineWidth = 2.0f
-            setDrawCircles(false)
-            valueTextColor = Color.TRANSPARENT
-            setDrawValues(false)
+	// 1. Define the unique configuration pairs for your nodes (Label to Color)
+        val nodeConfigs = arrayOf(
+            "Node 1" to Color.GREEN,
+            "Node 3" to Color.BLUE
+        )
+
+        // 2. Instantiate a single, master container for the chart
+        val lineData = LineData()
+
+        // 3. Loop through the configurations to dynamically generate and style each dataset
+        for ((label, nodeColor) in nodeConfigs) {
+            val d = LineDataSet(ArrayList(), label).apply {
+                color = nodeColor
+                lineWidth = 2.0f
+                setDrawCircles(false)
+                valueTextColor = Color.TRANSPARENT
+                setDrawValues(false)
+            }
+
+            // Append the newly created dataset directly to lineData
+            lineData.addDataSet(d)
         }
 
-        val dataSet2 = LineDataSet(ArrayList(), "Node 3").apply {
-            color = Color.BLUE
-            lineWidth = 2.0f
-            setDrawCircles(false)
-            valueTextColor = Color.TRANSPARENT
-            setDrawValues(false)
-        }
-
-        val lineData = LineData(dataSet1, dataSet2)
         chart.data = lineData
         chart.invalidate()
     }
@@ -186,7 +192,9 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
         val entryCount = dataSet.entryCount
         if (entryCount > 0) {
             val lastEntry = dataSet.getEntryForIndex(entryCount - 1)
-            if (x.toFloat() == lastEntry.x && y.toFloat() == lastEntry.y) {
+            // if (x.toFloat() == lastEntry.x && y.toFloat() == lastEntry.y) {
+	    // If the sensor value did not change, don't make a new entry.
+            if (y.toFloat() == lastEntry.y) {
                 return
             }
         }
@@ -365,7 +373,10 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
             }
 
             naaradWriter(mySocWriter, "done")
-            mySoc.close()
+	    try {
+		mySoc.close()
+	    } catch (ignored: Exception) {}
+            activeSocket = null
         }
 
         private fun naaradGetData(
@@ -374,7 +385,8 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
         ) {
             val host = NaaradUtils.serverName
             val port = NaaradUtils.serverPort
-            val mySoc = openSocket(host ?: "", port) ?: return
+            //val mySoc = openSocket(host ?: "", port) ?: return
+            val mySoc = naaradSocket(host, port) ?: return
             try {
                 if (getHistory) naaradGetDataHistoryEngine(keys, mySoc)
                 else naaradGetDataOnlyEngine(keys, mySoc)
