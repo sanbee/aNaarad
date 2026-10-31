@@ -222,7 +222,6 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
     override fun onPause() {
         System.err.println("NPF paused")
         super.onPause()
-        stopDataSource()
         if (myApp?.myWakeLock?.isHeld == true) {
             myApp!!.myWakeLock!!.release()
             System.err.println("Releasing wake lock")
@@ -231,10 +230,12 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
 
     fun startAllCharts(n: Int) {
         if ((n == 0) || (n == -1)) {
-            mSensorDataSource = SensorDataSource()
+            if (mSensorDataSource == null || mSensorDataSource?.isRunning == false) {
+                mSensorDataSource = SensorDataSource()
 
-            if (apiLevel <= 9) mSensorDataSource?.execute()
-            else mSensorDataSource?.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR)
+                if (apiLevel <= 9) mSensorDataSource?.execute()
+                else mSensorDataSource?.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR)
+            }
         }
     }
 
@@ -246,6 +247,8 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
         AsyncTask<Void?, Void?, String?>() {
         protected var nodeid: Int = 0
         @Volatile private var allDone = false
+        val isRunning: Boolean
+            get() = !allDone && status != Status.FINISHED
         private var doReDraw = true
         protected var x0: Double = 0.0
         protected var y0: Double = 0.0
@@ -323,7 +326,7 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
             for (i in keys.indices) {
                 if (allDone || isCancelled) break
                 val msg = "gethpkt " + keys[i].toString()
-                Log.i("NaaradData", "=== Requesting Historical Data for Sensor Node ===" + msg)
+                //Log.i("NaaradData", "=== Requesting Historical Data for Sensor Node ===" + msg)
                 System.err.println("=== Requesting Historical Data for Sensor Node ===" + msg)
                 naaradWriter(mySocWriter, msg)
                 SystemClock.sleep(100)
@@ -334,7 +337,7 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
                     message = NaaradUtils.naaradReader(mySocReader)
                     nPackets++
                     if (message.contains("PHINISHED")) {
-                        Log.i("NaaradData", "=== Completed Historical Data for Sensor Node ${keys[i]} === " + nPackets)
+                        //Log.i("NaaradData", "=== Completed Historical Data for Sensor Node ${keys[i]} === " + nPackets)
                         System.err.println("=== Completed Historical Data for Sensor Node ${keys[i]} === " + nPackets)
                     }
                     if (!message.contains("PHINISHED")) {
