@@ -44,12 +44,12 @@ class MainActivity : FragmentActivity(), NaaradPlotFragment.nPlotDataArrivalList
 
         if (!isBlinking) {
             isBlinking = true
-            gRunnableBlinker?.setText("Sensors .", Color.GREEN)
+            gRunnableBlinker?.setText("Sensors.", Color.GREEN)
             gUIHandler?.let { handler ->
                 gRunnableBlinker?.let { runnable ->
                     handler.post(runnable)
                     handler.postDelayed({
-                        runnable.setText("Sensors  ", Color.WHITE)
+                        runnable.setText("Sensors ", Color.WHITE)
                         handler.post(runnable)
                         isBlinking = false
                     }, 250)
@@ -93,7 +93,7 @@ class MainActivity : FragmentActivity(), NaaradPlotFragment.nPlotDataArrivalList
         TabLayoutMediator(mTabLayout!!, mViewPager!!) { tab, position ->
             tab.text = when (position) {
                 0 -> "Controls"
-                1 -> "Sensors  "
+                1 -> "Sensors"
                 2 -> "Settings"
                 else -> ""
             }

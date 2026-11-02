@@ -182,7 +182,7 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
         xAxis.textColor = Color.WHITE
         xAxis.textSize = 10f
         xAxis.valueFormatter = object : ValueFormatter() {
-            private val sdf = SimpleDateFormat("HH:mm:ss\ndd/MM", Locale.getDefault())
+            private val sdf = SimpleDateFormat("HH:mm:ss dd/MM", Locale.getDefault())
             override fun getFormattedValue(value: Float): String {
                 return try {
                     sdf.format(Date(value.toLong()))
@@ -297,6 +297,7 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
         protected var y0: Double = 0.0
         protected var stopRecording: Boolean = false
         private var activeSocket: Socket? = null
+	protected var naaradPingTimeout: Long=10000 // seconds
 
         fun finish() {
             allDone = true
@@ -401,7 +402,7 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
                 }
             }
             naaradWriter(mySocWriter, "done")
-            mySoc.close()
+            // mySoc.close()
         }
 
         private fun naaradGetDataOnlyEngine(
@@ -419,17 +420,20 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
                 naaradWriter(mySocWriter, msg)
                 SystemClock.sleep(100)
 
-                val message = naaradReader(mySocReader)
+                val message = NaaradUtils.naaradReader(mySocReader,"getcpkt")
                 if (message != null && message.contains("{")) {
                     publishJSON(message)
                 }
             }
 
             naaradWriter(mySocWriter, "done")
-	    try {
-		mySoc.close()
-	    } catch (ignored: Exception) {}
-            activeSocket = null
+	    // try
+	    // {
+	    // 	mySoc.close()
+	    // }
+	    // catch (ignored: Exception)
+	    // {}
+            // activeSocket = null
         }
 
         private fun naaradGetData(
@@ -439,18 +443,20 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
             val host = NaaradUtils.serverName
             val port = NaaradUtils.serverPort
             //val mySoc = openSocket(host ?: "", port) ?: return
-            val mySoc = naaradSocket(host, port) ?: return
+            // val mySoc = naaradSocket(host, port) ?: return
+            if (activeSocket==null)
+		activeSocket = naaradSocket(host, port) ?: return
             try {
-                if (getHistory) naaradGetDataHistoryEngine(keys, mySoc)
-                else naaradGetDataOnlyEngine(keys, mySoc)
+                if (getHistory) naaradGetDataHistoryEngine(keys, activeSocket!!)
+                else naaradGetDataOnlyEngine(keys, activeSocket!!)
             } catch (e: Exception) {
-                System.err.println("naaradGetData error: " + e.message)
+                Log.d("naaradGetData", "Error: " + e.message)
             } finally {
                 try {
-                    mySoc.close()
+		    activeSocket?.close()
                 } catch (ignored: Exception) {}
                 activeSocket = null
-            }
+	    }
         }
 
         override fun doInBackground(vararg params: Void?): String? {
@@ -462,10 +468,10 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
             naaradGetData(keys, true)
 
             while (!allDone) {
-                SystemClock.sleep(5000)
-                if (!allDone) {
-                    naaradGetData(keys, false)
-                }
+                SystemClock.sleep(naaradPingTimeout)
+                // if (!allDone) {
+                naaradGetData(keys, false)
+                // }
             }
 
             return retStr

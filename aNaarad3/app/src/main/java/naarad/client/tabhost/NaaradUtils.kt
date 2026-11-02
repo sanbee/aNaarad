@@ -161,7 +161,8 @@ object NaaradUtils {
     }
 
     @Throws(IOException::class)
-    fun naaradReader(socReader: BufferedReader): String
+    fun naaradReader(socReader: BufferedReader,
+		     tag: String=""): String
     {
 	var charsRead :Int = 0
 	//char[] buffer = new char[1024];
@@ -172,67 +173,72 @@ object NaaradUtils {
 	// all that this thread does is wait for data to arrive,
 	// and supply it to the plotter
 	try
+	{
+	    // First read the message length.
+	    //		while ((oneChar = (char)socReader.read()) != -1) && (charsRead < 1024))
+	    oneChar=null
+	    // while (charsRead < 1024)
+	    while (charsRead < 16)
 	    {
-		// First read the message length.  
-//		while ((oneChar = (char)socReader.read()) != -1) && (charsRead < 1024))
-		oneChar=null
-		while (charsRead < 1024)
-		    {
-		    	oneChar = socReader.read().toChar()
-			if ((oneChar == ' ') && (charsRead > 0))
-			    break
-			else
-			    {
-				message += oneChar
-				charsRead++
-			    }
-		    }
-		// Convert the message length string to integer
-		//System.err.println("Msglen message:"+message)
-		var msgLen: Int
-		try 
-		    {
-			msgLen = Integer.parseInt(message)
-		    } 
-		catch(nfe: NumberFormatException)
-		    {
-			System.err.println("Error in converting message length to integer");
-			return "";
-		    }
-		// Add blank to the message so far.  The read and
-		// add next msgLen characters to the message
-		// string.
-		//System.err.println("Msglen:"+msgLen);
-		message+=" ";
-		// while (((int)(oneChar = (char)socReader.read()) != -1) &&
-		//        (charsRead < msgLen)
-		//        )
-		oneChar=null
-		while (charsRead < msgLen)
-		    {
-		    	oneChar = socReader.read().toChar()
-			// Do a bit of lexical analaysis...
-			if (oneChar != '}') 
-			    {
-				message += oneChar;
-				charsRead++;
-			    }
-			else break;
-		    }
-		if (oneChar != '}')  throw JSONException("End \"}\" not found")
-		message += oneChar + "\n";
-		
-		//System.err.println("naaradReader() Msg:"+message);
-		//return charsRead;
-		return message;
+		oneChar = socReader.read().toChar()
+		if ((oneChar == ' ') && (charsRead > 0))
+		    break
+		else
+		{
+		    message += oneChar
+		    charsRead++
+		}
 	    }
-	catch (e: JSONException) 
+	    // Convert the message length string to integer
+	    //System.err.println("Msglen message:"+message)
+	    var msgLen: Int
+	    try
 	    {
-		//throw new RuntimeException(e);
-		System.err.println(e.message);
-		uiToast(e.message,Gravity.BOTTOM);
+		msgLen = Integer.parseInt(message)
+	    }
+	    catch(nfe: NumberFormatException)
+	    {
+		System.err.println("Error in converting message length to integer");
 		return "";
 	    }
+	    // Add blank to the message so far.  The read and
+	    // add next msgLen characters to the message
+	    // string.
+	    //if (tag != "") System.err.println(tag+": Msglen:"+msgLen);
+
+	    message+=" ";
+	    // while (((int)(oneChar = (char)socReader.read()) != -1) &&
+	    //        (charsRead < msgLen)
+	    //        )
+	    oneChar=null
+	    charsRead=0
+	    while (charsRead < msgLen)
+	    {
+		oneChar = socReader.read().toChar()
+
+		// // Do a bit of lexical analaysis...
+		if (oneChar != '}')
+		{
+		    message += oneChar;
+		    charsRead++;
+		}
+		else break;
+	    }
+	    //if (tag != "") System.err.println(tag+": message: "+message)
+
+	    if (oneChar != '}')  throw JSONException("End \"}\" not found")
+	    message += oneChar + "\n"
+	    //		message += "\n"
+
+	    return message;
+	}
+	catch (e: JSONException)
+	{
+	    //throw new RuntimeException(e);
+	    System.err.println(e.message);
+	    uiToast(e.message,Gravity.BOTTOM);
+	    return "";
+	}
     }
 
 
@@ -246,7 +252,7 @@ object NaaradUtils {
         if (hostName.isNullOrEmpty() || port <= 0) return null
         return try {
             val clientSoc = Socket()
-            clientSoc.soTimeout = 2000 //Time out receiving 
+            clientSoc.soTimeout = 10000 //Time out receiving
             clientSoc.connect(java.net.InetSocketAddress(hostName, port), 20000) // TimeOut for connection
             if (clientSoc.isConnected) clientSoc else null
         } catch (e: Exception) {
