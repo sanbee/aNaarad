@@ -17,10 +17,19 @@ import android.view.Gravity
 import android.security.NetworkSecurityPolicy
 import android.os.Build
 
-
 object NaaradUtils {
     var prefs: SharedPreferences? = null
     var nodeID2Ndx: java.util.HashMap<Int?, Int?>? = null
+
+    // Timeout in seconds used to ping the server for live sensor data
+    var livePingTimeout: Double = currentPingTimeout // Used in loops
+    var currentPingTimeout: Double                   // User setting (infrequently changed)
+	get() = getPreference("pingTimeout", "10.0")?.toDoubleOrNull() ?: 10.0
+	set(value) {
+	    livePingTimeout = value
+	    setPreference("pingTimeout", value.toString())
+	    uiToast("pingTimeout set to "+value.toString(), Gravity.BOTTOM)
+	}
 
     val defaultPort: Int
         get() = getPreference("serverPort", 1234)
@@ -43,34 +52,58 @@ object NaaradUtils {
         set(port) {
             setPreference("serverPort", port)
         }
+    //
+    //---------------------------------------------------------------------------------------------
+    //
+    inline fun <reified T> setPreference(name: String?, value: T) {
+	val ctx = NaaradAbstractFragment.mActivity ?: return
+	val prefs: SharedPreferences = ctx.getSharedPreferences("nSettings", Context.MODE_PRIVATE)
+	val editor: SharedPreferences.Editor = prefs.edit()
 
-    fun setPreference(name: String?, value: String?) {
-        val ctx = NaaradAbstractFragment.mActivity ?: return
-        prefs = ctx.getSharedPreferences("nSettings", Context.MODE_PRIVATE)
-        val editor: SharedPreferences.Editor = prefs!!.edit()
-        editor.putString(name, value)
-        editor.commit()
+	when (value) {
+            is String? -> editor.putString(name, value)
+            is Int -> editor.putInt(name, value)
+            is Boolean -> editor.putBoolean(name, value)
+            is Long -> editor.putLong(name, value)
+            is Float -> editor.putFloat(name, value)
+            else -> throw IllegalArgumentException("Unsupported preference type: ${T::class.java.name}")
+	}
+	
+	editor.apply() // Highly recommended over commit() to prevent UI freezing
     }
 
-    fun setPreference(name: String?, value: Int) {
-        val ctx = NaaradAbstractFragment.mActivity ?: return
-        prefs = ctx.getSharedPreferences("nSettings", Context.MODE_PRIVATE)
-        val editor: SharedPreferences.Editor = prefs!!.edit()
-        editor.putInt(name, value)
-        editor.commit()
-    }
+    //---------------------------------------------------------------------------------------------
 
-    fun getPreference(name: String?, defValue: Int): Int {
-        val ctx = NaaradAbstractFragment.mActivity ?: return defValue
-        prefs = ctx.getSharedPreferences("nSettings", Context.MODE_PRIVATE)
-        return prefs?.getInt(name, defValue) ?: defValue
+    inline fun <reified T> getPreference(name: String?, defValue: T): T {
+	val ctx = NaaradAbstractFragment.mActivity ?: return defValue
+	val prefs: SharedPreferences = ctx.getSharedPreferences("nSettings", Context.MODE_PRIVATE)
+	
+	val result: Any? = when (T::class) {
+            String::class -> prefs.getString(name, defValue as? String)
+            Int::class -> prefs.getInt(name, defValue as Int)
+            Boolean::class -> prefs.getBoolean(name, defValue as Boolean)
+            Long::class -> prefs.getLong(name, defValue as Long)
+            Float::class -> prefs.getFloat(name, defValue as Float)
+            else -> throw IllegalArgumentException("Unsupported preference type: ${T::class.java.name}")
+	}
+	
+	return (result as? T) ?: defValue
     }
+    //
+    //---------------------------------------------------------------------------------------------
+    //
 
-    fun getPreference(name: String?, defValue: String?): String? {
-        val ctx = NaaradAbstractFragment.mActivity ?: return defValue
-        prefs = ctx.getSharedPreferences("nSettings", Context.MODE_PRIVATE)
-        return prefs?.getString(name, defValue) ?: defValue
-    }
+    // fun getPreference(name: String?, defValue: Int): Int {
+    //     val ctx = NaaradAbstractFragment.mActivity ?: return defValue
+    //     prefs = ctx.getSharedPreferences("nSettings", Context.MODE_PRIVATE)
+    //     return prefs?.getInt(name, defValue) ?: defValue
+    // }
+
+    // fun getPreference(name: String?, defValue: String?): String? {
+    //     val ctx = NaaradAbstractFragment.mActivity ?: return defValue
+    //     prefs = ctx.getSharedPreferences("nSettings", Context.MODE_PRIVATE)
+    //     return prefs?.getString(name, defValue) ?: defValue
+    // }
 
     val nodeID2NdxMap: HashMap<Int?, Int?>
         get() {

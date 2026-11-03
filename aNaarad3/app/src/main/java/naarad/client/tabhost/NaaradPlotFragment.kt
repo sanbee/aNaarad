@@ -34,6 +34,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.HashMap
 import java.util.Locale
+import kotlin.math.roundToLong
 
 class VerticalTitleLineChart @JvmOverloads constructor(
     context: Context,
@@ -297,7 +298,6 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
         protected var y0: Double = 0.0
         protected var stopRecording: Boolean = false
         private var activeSocket: Socket? = null
-	protected var naaradPingTimeout: Long=10000 // seconds
 
         fun finish() {
             allDone = true
@@ -468,10 +468,9 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
             naaradGetData(keys, true)
 
             while (!allDone) {
-                SystemClock.sleep(naaradPingTimeout)
-                // if (!allDone) {
+		val pingTO: Long = ((NaaradUtils.livePingTimeout) * 1000).roundToLong()
+                SystemClock.sleep(pingTO)
                 naaradGetData(keys, false)
-                // }
             }
 
             return retStr

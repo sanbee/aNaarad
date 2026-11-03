@@ -52,36 +52,4 @@
        android:text="Keep CPU + WiFi on in the background?" 
        />
 
-
-    <!-- <ToggleButton -->
-    <!--    android:id="@+id/lamp0" -->
-    <!--    android:layout_width="wrap_content" -->
-    <!--    android:layout_height="wrap_content" -->
-    <!--    android:layout_centerVertical="true" -->
-    <!--    android:layout_alignParentLeft="true" -->
-    <!--    android:layout_alignParentTop="true" -->
-    <!--    android:textOn="Lamp 0" -->
-    <!--    android:textOff="Lamp 0" -->
-    <!--    android:text="Lamp1" /> -->
-    <!-- <ToggleButton -->
-    <!--    android:id="@+id/lamp1" -->
-    <!--    android:layout_width="wrap_content" -->
-    <!--    android:layout_height="wrap_content" -->
-    <!--    android:layout_centerVertical="true" -->
-    <!--    android:layout_alignParentLeft="true" -->
-    <!--    android:layout_below="@+id/lamp0" -->
-    <!--    android:textOn="Lamp 1" -->
-    <!--    android:textOff="Lamp 1" -->
-    <!--    android:text="Lamp2" /> -->
-    <!-- <ToggleButton -->
-    <!--    android:id="@+id/lamp2" -->
-    <!--    android:layout_width="wrap_content" -->
-    <!--    android:layout_height="wrap_content" -->
-    <!--    android:layout_centerVertical="true" -->
-    <!--    android:layout_alignParentLeft="true" -->
-    <!--    android:layout_below="@+id/lamp1" -->
-    <!--    android:textOn="Lamp 2" -->
-    <!--    android:textOff="Lamp 2" -->
-    <!--    android:text="Lamp3" /> -->
-
 </RelativeLayout>
