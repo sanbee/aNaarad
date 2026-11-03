@@ -1,14 +1,18 @@
 package naarad.client.tabhost
 
+import android.content.Context
 import android.content.IntentFilter
 import android.graphics.Color
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.Gravity
+import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
@@ -20,6 +24,7 @@ class NaaradSettingFragment : NaaradAbstractFragment() {
     private val printwriter: PrintWriter? = null
     private var serverNameField: EditText? = null
     private var serverPortField: EditText? = null
+    private var pingTimeoutField: EditText? = null
     private var setButton: Button? = null
     private var wakeButton: CheckBox? = null
     private var wifiControl: CheckBox? = null
@@ -47,6 +52,24 @@ class NaaradSettingFragment : NaaradAbstractFragment() {
             }
         } catch (nfe: NumberFormatException) {
             // keep existing port
+        }
+        validateAndUpdatePingTimeout()
+    }
+
+    private fun hideKeyboard(v: View) {
+        val imm = activity?.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+        imm?.hideSoftInputFromWindow(v.windowToken, 0)
+    }
+
+    private fun validateAndUpdatePingTimeout() {
+        val inputStr = pingTimeoutField?.text?.toString()?.trim()
+        val numVal = inputStr?.toDoubleOrNull()
+        if (numVal != null && numVal > 0.0) {
+            NaaradUtils.currentPingTimeout = numVal
+            pingTimeoutField?.setText(numVal.toString())
+        } else {
+            val lastValid = NaaradUtils.currentPingTimeout
+            pingTimeoutField?.setText(lastValid.toString())
         }
     }
 
@@ -171,6 +194,31 @@ class NaaradSettingFragment : NaaradAbstractFragment() {
                 }
             }
         })
+
+        val pingId = resources.getIdentifier("pingTimeout", "id", requireContext().packageName)
+        if (pingId != 0) {
+            pingTimeoutField = mView?.findViewById(pingId)
+        }
+        pingTimeoutField?.setText(NaaradUtils.currentPingTimeout.toString())
+
+        pingTimeoutField?.setOnEditorActionListener { v, actionId, event ->
+            if (actionId == EditorInfo.IME_ACTION_DONE || actionId == EditorInfo.IME_ACTION_NEXT ||
+                (event != null && event.keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_DOWN)
+            ) {
+                validateAndUpdatePingTimeout()
+                hideKeyboard(v)
+                v.clearFocus()
+                true
+            } else {
+                false
+            }
+        }
+
+        pingTimeoutField?.setOnFocusChangeListener { _, hasFocus ->
+            if (!hasFocus) {
+                validateAndUpdatePingTimeout()
+            }
+        }
 
         setButton =
             mView?.findViewById<View?>(R.id.setButton) as? Button

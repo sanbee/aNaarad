@@ -52,4 +52,22 @@
        android:text="Keep CPU + WiFi on in the background?" 
        />
 
+    <TextView
+       android:id="@+id/pingTimeoutLabel"
+       android:layout_width="wrap_content"
+       android:layout_height="wrap_content"
+       android:layout_below="@+id/wake"
+       android:layout_marginTop="16dp"
+       android:text="Ping Timeout (sec): " />
+
+    <EditText
+       android:id="@+id/pingTimeout"
+       android:layout_width="wrap_content"
+       android:layout_height="wrap_content"
+       android:layout_toRightOf="@+id/pingTimeoutLabel"
+       android:layout_alignBaseline="@+id/pingTimeoutLabel"
+       android:ems="6"
+       android:inputType="numberDecimal"
+       android:imeOptions="actionDone" />
+
 </RelativeLayout>

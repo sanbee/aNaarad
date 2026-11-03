@@ -24,7 +24,7 @@ object NaaradUtils {
     // Timeout in seconds used to ping the server for live sensor data
     var livePingTimeout: Double = currentPingTimeout // Used in loops
     var currentPingTimeout: Double                   // User setting (infrequently changed)
-	get() = getPreference("pingTimeout", "10.0")?.toDoubleOrNull() ?: 10.0
+	get() = getPreference("pingTimeout", "60.0")?.toDoubleOrNull() ?: 60.0
 	set(value) {
 	    livePingTimeout = value
 	    setPreference("pingTimeout", value.toString())
