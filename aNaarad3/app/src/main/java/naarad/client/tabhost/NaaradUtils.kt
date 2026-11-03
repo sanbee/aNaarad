@@ -1,5 +1,6 @@
 package naarad.client.tabhost
 
+import android.util.Log
 import android.content.Context
 import android.content.SharedPreferences
 import android.net.ConnectivityManager
@@ -28,7 +29,7 @@ object NaaradUtils {
 	set(value) {
 	    livePingTimeout = value
 	    setPreference("pingTimeout", value.toString())
-	    uiToast("pingTimeout set to "+value.toString(), Gravity.BOTTOM)
+	    //uiToast("pingTimeout set to "+value.toString(), Gravity.BOTTOM)
 	}
 
     val defaultPort: Int
@@ -223,7 +224,7 @@ object NaaradUtils {
 		}
 	    }
 	    // Convert the message length string to integer
-	    //System.err.println("Msglen message:"+message)
+	    //Log.d("NU::naaradReader","Msglen message:"+message)
 	    var msgLen: Int
 	    try
 	    {
@@ -231,13 +232,13 @@ object NaaradUtils {
 	    }
 	    catch(nfe: NumberFormatException)
 	    {
-		System.err.println("Error in converting message length to integer");
+		Log.d("naaradReader():","Error in converting message length to integer");
 		return "";
 	    }
 	    // Add blank to the message so far.  The read and
 	    // add next msgLen characters to the message
 	    // string.
-	    //if (tag != "") System.err.println(tag+": Msglen:"+msgLen);
+	    //if (tag != "") Log.d("naaradReader(): ", tag+": Msglen:"+msgLen);
 
 	    message+=" ";
 	    // while (((int)(oneChar = (char)socReader.read()) != -1) &&
@@ -257,7 +258,7 @@ object NaaradUtils {
 		}
 		else break;
 	    }
-	    //if (tag != "") System.err.println(tag+": message: "+message)
+	    //if (tag != "") Log.d("naaradReader():" , tag+": message: "+message)
 
 	    if (oneChar != '}')  throw JSONException("End \"}\" not found")
 	    message += oneChar + "\n"
@@ -267,9 +268,8 @@ object NaaradUtils {
 	}
 	catch (e: JSONException)
 	{
-	    //throw new RuntimeException(e);
-	    System.err.println(e.message);
-	    uiToast(e.message,Gravity.BOTTOM);
+	    Log.d("naaradReader():", e.message ?: "JSONException");
+	    uiToast(e.message ?: "JSONException",Gravity.BOTTOM);
 	    return "";
 	}
     }

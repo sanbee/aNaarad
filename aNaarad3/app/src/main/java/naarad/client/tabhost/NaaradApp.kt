@@ -7,6 +7,7 @@ import android.os.PowerManager
 import android.os.PowerManager.WakeLock
 import android.util.DisplayMetrics
 import android.view.WindowManager
+import android.util.Log
 
 //import android.net.wifi.WifiManager.WifiLock;
 class NaaradApp : Application() {
@@ -39,7 +40,7 @@ class NaaradApp : Application() {
         run {
             myWakeLock = wakeLockPM.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "MyWakelockTag")
             myWifiLock = myWifiManager!!.createWifiLock(WifiManager.WIFI_MODE_FULL, "MyWifiLockTag")
-            System.err.println("Making wakelock")
+            Log.d("NApp::makeLocks","Making wakelock")
         }
     }
 

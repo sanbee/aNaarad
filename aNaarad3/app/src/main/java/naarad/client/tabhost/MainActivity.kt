@@ -4,6 +4,9 @@ import android.graphics.Color
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.text.Spannable
+import android.text.SpannableString
+import android.text.style.ForegroundColorSpan
 import android.widget.TextView
 import androidx.fragment.app.FragmentActivity
 import androidx.viewpager2.widget.ViewPager2
@@ -30,8 +33,15 @@ class MainActivity : FragmentActivity(), NaaradPlotFragment.nPlotDataArrivalList
         }
 
         override fun run() {
-            b1?.setTextColor(theColor)
-            mTabLayout?.getTabAt(1)?.text = theText
+            val tab = mTabLayout?.getTabAt(1) ?: return
+            val label = theText ?: "Sensors"
+            if (theColor == Color.GREEN) {
+                val spannable = SpannableString(label)
+                spannable.setSpan(ForegroundColorSpan(Color.GREEN), 0, spannable.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                tab.text = spannable
+            } else {
+                tab.text = label.trim()
+            }
         }
     }
 
@@ -44,12 +54,12 @@ class MainActivity : FragmentActivity(), NaaradPlotFragment.nPlotDataArrivalList
 
         if (!isBlinking) {
             isBlinking = true
-            gRunnableBlinker?.setText("Sensors.", Color.GREEN)
+            gRunnableBlinker?.setText("Sensors", Color.GREEN)
             gUIHandler?.let { handler ->
                 gRunnableBlinker?.let { runnable ->
                     handler.post(runnable)
                     handler.postDelayed({
-                        runnable.setText("Sensors ", Color.WHITE)
+                        runnable.setText("Sensors", Color.WHITE)
                         handler.post(runnable)
                         isBlinking = false
                     }, 250)

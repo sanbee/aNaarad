@@ -253,22 +253,22 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
     }
 
     override fun onDestroy() {
-        System.err.println("NPF destroyed")
+        Log.d("NPF::onDestroy(): ", "NPF destroyed")
         super.onDestroy()
         stopDataSource()
     }
 
     override fun onResume() {
-        System.err.println("NPF resumed")
+        Log.d("NPF::onResume","NPF resumed")
         super.onResume()
     }
 
     override fun onPause() {
-        System.err.println("NPF paused")
+        Log.d("NPF::onPause: ","NPF paused")
         super.onPause()
         if (myApp?.myWakeLock?.isHeld == true) {
             myApp!!.myWakeLock!!.release()
-            System.err.println("Releasing wake lock")
+            Log.d("NPF::onPause:","Releasing wake lock")
         }
     }
 
@@ -325,7 +325,7 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
             val jsonStart = message.indexOf('{')
             val jsonEnd = message.lastIndexOf('}')
             if (jsonStart < 0 || jsonEnd <= jsonStart) {
-                System.err.println("publishJSON: Error in message" + message)
+                Log.d("publishJSON","publishJSON: Error in message" + message)
                 return
             }
 
@@ -378,7 +378,7 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
                 if (allDone || isCancelled) break
                 val msg = "gethpkt " + keys[i].toString()
                 //Log.i("NaaradData", "=== Requesting Historical Data for Sensor Node ===" + msg)
-                System.err.println("=== Requesting Historical Data for Sensor Node ===" + msg)
+                Log.d("naaradGetDataHistoryEngine","=== Requesting Historical Data for Sensor Node ===" + msg)
                 naaradWriter(mySocWriter, msg)
                 SystemClock.sleep(100)
 
@@ -389,7 +389,7 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
                     nPackets++
                     if (message.contains("PHINISHED")) {
                         //Log.i("NaaradData", "=== Completed Historical Data for Sensor Node ${keys[i]} === " + nPackets)
-                        System.err.println("=== Completed Historical Data for Sensor Node ${keys[i]} === " + nPackets)
+                        Log.d("naaradGetDataHistoryEngine","=== Completed Historical Data for Sensor Node ${keys[i]} === " + nPackets)
                     }
                     if (!message.contains("PHINISHED")) {
                         publishJSON(message)

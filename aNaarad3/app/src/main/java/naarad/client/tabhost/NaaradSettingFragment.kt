@@ -65,8 +65,12 @@ class NaaradSettingFragment : NaaradAbstractFragment() {
         val inputStr = pingTimeoutField?.text?.toString()?.trim()
         val numVal = inputStr?.toDoubleOrNull()
         if (numVal != null && numVal > 0.0) {
+            val oldVal = NaaradUtils.currentPingTimeout
             NaaradUtils.currentPingTimeout = numVal
             pingTimeoutField?.setText(numVal.toString())
+            if (oldVal != numVal) {
+                toast("Setting saved: Ping timeout = $numVal sec", Gravity.BOTTOM)
+            }
         } else {
             val lastValid = NaaradUtils.currentPingTimeout
             pingTimeoutField?.setText(lastValid.toString())
@@ -199,7 +203,7 @@ class NaaradSettingFragment : NaaradAbstractFragment() {
         if (pingId != 0) {
             pingTimeoutField = mView?.findViewById(pingId)
         }
-        pingTimeoutField?.setText(NaaradUtils.currentPingTimeout.toString())
+        pingTimeoutField?.setText(NaaradUtils.livePingTimeout.toString())
 
         pingTimeoutField?.setOnEditorActionListener { v, actionId, event ->
             if (actionId == EditorInfo.IME_ACTION_DONE || actionId == EditorInfo.IME_ACTION_NEXT ||

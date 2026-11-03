@@ -1,5 +1,6 @@
 package naarad.client.tabhost
 
+import android.util.Log
 import android.graphics.Color
 import android.view.ViewGroup.MarginLayoutParams
 import com.sanbee.anaarad.R
@@ -113,7 +114,7 @@ class NaaradDnDOnTouchListener(//private View selected_item=null;
                     }
                 }
 
-                //System.err.println("Drop pos.: $left $top")
+                //Log.d("NDnDOTL::onTouchListener_p","Drop pos.: $left $top")
                 myApp.swipeState = true
             }
         }

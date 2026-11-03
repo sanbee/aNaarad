@@ -1,5 +1,6 @@
 package naarad.client.tabhost
 
+import android.util.Log
 import android.app.Activity
 import android.graphics.Color
 import android.graphics.Typeface
@@ -103,8 +104,8 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
         x = pX - oX + iX
         y = pY - oY + iY
 
-        // System.err.println("M Display Here X Value-->"+(x)+" "+pX+" "+oX+" "+iX);
-        // System.err.println("M Display Here Y Value-->"+(y)+" "+pY+" "+oY+" "+iY);
+        // Log.d("NCF::resizeView()","M Display Here X Value-->"+(x)+" "+pX+" "+oX+" "+iX);
+        // Log.d("NCF::resizeView()","M Display Here Y Value-->"+(y)+" "+pY+" "+oY+" "+iY);
         val lp: RelativeLayout.LayoutParams = RelativeLayout.LayoutParams(
             MarginLayoutParams(
                 RelativeLayout.LayoutParams.WRAP_CONTENT,
@@ -136,7 +137,7 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
             setBubbleValue(nodeid, displayTemp)
             return tv
         } catch (e: Exception) {
-            System.err.println("setSensorValues error: " + e.message)
+            Log.d("NCF::setSensorValues","setSensorValues error: " + e.message)
         }
         return null
     }
@@ -432,7 +433,7 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
         val keys = getKeysAsArray(nodeID2Ndx!!)
 
         // for (int i=0;i<keys.length;i++)
-        //     System.err.println("Keys: "+keys[i]);
+        //     Log.d("NCF::makeSensorIcons","Keys: "+keys[i]);
         val nBubbles = nodeID2Ndx!!.size
 
         tempBubbleArr = arrayOfNulls<TextView>(nBubbles)
@@ -593,14 +594,14 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
         super.onResume()
         makeSensorIcons(mView!!)
         (mView?.layoutParams as? MarginLayoutParams)?.let { lp ->
-            // System.err.println(
+            // Log.d("NCF::onResume",
             //     "Offsets: " +
             //             lp.leftMargin + " " +
             //             lp.rightMargin
             // )
         }
         getRetainInstance()
-        System.err.println("From NCF::onResume")
+        Log.d("NCF::onResume","From NCF::onResume")
     }
 
     fun resetBulbHighlight(tag: Int) {
@@ -672,7 +673,7 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
     override fun onPause() {
         super.onPause()
         setRetainInstance(true)
-        System.err.println("From NCF::onPause")
+        Log.d("NCF::onPause","From NCF::onPause")
         savePositions()
     }
 
