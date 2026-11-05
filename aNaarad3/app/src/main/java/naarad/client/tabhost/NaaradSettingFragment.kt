@@ -90,8 +90,6 @@ class NaaradSettingFragment : NaaradAbstractFragment() {
         }
         if (giveMsg) toast("Wake and Wifi locks released.", Gravity.BOTTOM)
 
-        saveSettingsFromFields()
-
         setPreference("wifiControl", gWifiControl)
         setPreference("wakeControl", gWakeLockControl)
         if (wifiTurnedOnByMe) {

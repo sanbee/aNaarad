@@ -498,6 +498,11 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
             naaradGetData(keys, true)
 
 	    //            while (!allDone && !sleeper.isAborted) {
+
+	    // NaaradUtils.livePingTimeout is a cached version of
+	    // NaaradUtils.currentPingTimeout.  When the latter is
+	    // changed, it saved vis setPreferences() and re-cached
+	    // for efficient access at run time.
 	    while (!allDone) {
                 val pingTO: Long = ((NaaradUtils.livePingTimeout) * 1000).roundToLong()
 		//Log.d("doInBG","pingTO = "+pingTO.toString())

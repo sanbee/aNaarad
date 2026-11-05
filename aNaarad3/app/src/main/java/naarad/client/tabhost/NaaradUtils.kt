@@ -36,9 +36,12 @@ object NaaradUtils {
     var currentPingTimeout: Double                   // User setting (infrequently changed)
 	get() = getPreference("pingTimeout", "60.0")?.toDoubleOrNull() ?: 60.0
 	set(value) {
+            val oldVal = livePingTimeout
 	    livePingTimeout = value
 	    setPreference("pingTimeout", value.toString())
-	    NaaradPlotFragment.activeInstance?.abortSleeperForTimeoutChange()
+            if (oldVal != value) {
+                NaaradPlotFragment.activeInstance?.abortSleeperForTimeoutChange()
+            }
 	}
 
     val defaultPort: Int
