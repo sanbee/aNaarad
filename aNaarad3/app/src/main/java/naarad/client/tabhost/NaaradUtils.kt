@@ -38,7 +38,7 @@ object NaaradUtils {
 	set(value) {
 	    livePingTimeout = value
 	    setPreference("pingTimeout", value.toString())
-	    //uiToast("pingTimeout set to "+value.toString(), Gravity.BOTTOM)
+	    NaaradPlotFragment.activeInstance?.abortSleeperForTimeoutChange()
 	}
 
     val defaultPort: Int
@@ -241,13 +241,13 @@ object NaaradUtils {
 	    }
 	    catch(nfe: NumberFormatException)
 	    {
-		Log.d("naaradReader():","Error in converting message length to integer");
+		Log.d("NU::naaradReader","Error in converting message length to integer");
 		return "";
 	    }
 	    // Add blank to the message so far.  The read and
 	    // add next msgLen characters to the message
 	    // string.
-	    //if (tag != "") Log.d("naaradReader(): ", tag+": Msglen:"+msgLen);
+	    //if (tag != "") Log.d("NU::naaradReader", tag+": Msglen:"+msgLen);
 
 	    message+=" ";
 	    // while (((int)(oneChar = (char)socReader.read()) != -1) &&
@@ -267,7 +267,7 @@ object NaaradUtils {
 		}
 		else break;
 	    }
-	    //if (tag != "") Log.d("naaradReader():" , tag+": message: "+message)
+	    //if (tag != "") Log.d("NU::naaradReader" , tag+": message: "+message)
 
 	    if (oneChar != '}')  throw JSONException("End \"}\" not found")
 	    message += oneChar + "\n"
@@ -277,7 +277,7 @@ object NaaradUtils {
 	}
 	catch (e: JSONException)
 	{
-	    Log.d("naaradReader():", e.message ?: "JSONException");
+	    Log.d("NU::naaradReader", e.message ?: "JSONException");
 	    uiToast(e.message ?: "JSONException",Gravity.BOTTOM);
 	    return "";
 	}

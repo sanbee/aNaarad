@@ -92,6 +92,7 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
+        activeInstance = this
         apiLevel = Build.VERSION.SDK_INT
 
         @Suppress("DEPRECATION")
@@ -264,12 +265,17 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
         chart.moveViewToX(x.toFloat())
     }
 
+    fun abortSleeperForTimeoutChange() {
+        mSensorDataSource?.abortSleeper()
+    }
+
     fun stopDataSource() {
         if (mSensorDataSource != null) mSensorDataSource!!.finish()
     }
 
     override fun onDestroy() {
-        Log.d("NPF::onDestroy(): ", "NPF destroyed")
+        Log.d("NPF::onDestroy()", "NPF destroyed")
+        if (activeInstance == this) activeInstance = null
         super.onDestroy()
         stopDataSource()
     }
@@ -280,11 +286,11 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
     }
 
     override fun onPause() {
-        Log.d("NPF::onPause: ","NPF paused")
+        Log.d("NPF::onPause","NPF paused")
         super.onPause()
         if (myApp?.myWakeLock?.isHeld == true) {
             myApp!!.myWakeLock!!.release()
-            Log.d("NPF::onPause:","Releasing wake lock")
+            Log.d("NPF::onPause","Releasing wake lock")
         }
     }
 
@@ -315,8 +321,15 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
         protected var stopRecording: Boolean = false
         private var activeSocket: Socket? = null
 
+        val sleeper = iSleep()
+
+        fun abortSleeper() {
+            sleeper.abort()
+        }
+
         fun finish() {
             allDone = true
+            sleeper.abort()
             try {
                 activeSocket?.close()
             } catch (ignored: Exception) {}
@@ -479,13 +492,25 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
             val retStr = "AllOK"
             allDone = false
             nConnected = true
+            sleeper.reset()
             val keys = getKeysAsArray(nodeID2NdxMap)
 
             naaradGetData(keys, true)
 
-            while (!allDone) {
-		val pingTO: Long = ((NaaradUtils.livePingTimeout) * 1000).roundToLong()
-                SystemClock.sleep(pingTO)
+	    //            while (!allDone && !sleeper.isAborted) {
+	    while (!allDone) {
+                val pingTO: Long = ((NaaradUtils.livePingTimeout) * 1000).roundToLong()
+		//Log.d("doInBG","pingTO = "+pingTO.toString())
+
+		// An interruptible sleep, which is interrupted if
+		// NaaradUtils.currentPingTimeout is updated
+		// (currently from the NaaradSettingFragment.kt)
+                sleeper.sleep(pingTO)
+                sleeper.reset()
+
+                //if (allDone || sleeper.isAborted) break
+		if (allDone) break
+
                 naaradGetData(keys, false)
             }
 
@@ -522,6 +547,9 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
 
     companion object {
         private var mView: View? = null
+
+        @Volatile
+        var activeInstance: NaaradPlotFragment? = null
 
         fun newInstanceNPF(sampleText: String?): NaaradPlotFragment {
             val f = NaaradPlotFragment()
