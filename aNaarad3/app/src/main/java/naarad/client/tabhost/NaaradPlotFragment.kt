@@ -236,16 +236,32 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
         val entryCount = dataSet.entryCount
         if (entryCount > 0) {
             val lastEntry = dataSet.getEntryForIndex(entryCount - 1)
-            // if (x.toFloat() == lastEntry.x && y.toFloat() == lastEntry.y) {
-	    // If the sensor value did not change, don't make a new entry.
+            // If the sensor value did not change, don't make a new entry.
             if (y.toFloat() == lastEntry.y) {
                 return
             }
         }
 
+        // 1. Add the new data point
         dataSet.addEntry(Entry(x.toFloat(), y.toFloat()))
+
+        // 2. Remove all points older than 2 days relative to the new point x
+        // val maxSpanSeconds = 2 * 24 * 3600 // 2 days in seconds
+        val newXSec = x.toFloat() / 1000f
+        while (dataSet.entryCount > 1) {
+            val firstXSec = dataSet.getEntryForIndex(0).x / 1000f
+            if (newXSec - firstXSec > NaaradUtils.livePlotTimerange) {
+                dataSet.removeFirst()
+            } else {
+                break
+            }
+        }
+
         data.notifyDataChanged()
         chart.notifyDataSetChanged()
+
+        // 3. Scroll the viewport to the new point on the right
+        chart.moveViewToX(x.toFloat())
     }
 
     fun stopDataSource() {

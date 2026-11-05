@@ -22,8 +22,17 @@ object NaaradUtils {
     var prefs: SharedPreferences? = null
     var nodeID2Ndx: java.util.HashMap<Int?, Int?>? = null
 
+    // Default time range of 2 days (in seconds)
+    var livePlotTimerange: Double = currentPlotTimerange; // To be used in loops
+    var currentPlotTimerange: Double             // User setting (infrequently changed)
+	get() = getPreference("plotTimerange", "172800.0")?.toDoubleOrNull() ?: 172800.0
+	set(value) {
+	    livePlotTimerange = value
+	    setPreference("plotTimerange", value.toString())
+	}
+
     // Timeout in seconds used to ping the server for live sensor data
-    var livePingTimeout: Double = currentPingTimeout // Used in loops
+    var livePingTimeout: Double = currentPingTimeout // To be used in loops
     var currentPingTimeout: Double                   // User setting (infrequently changed)
 	get() = getPreference("pingTimeout", "60.0")?.toDoubleOrNull() ?: 60.0
 	set(value) {
