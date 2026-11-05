@@ -23,6 +23,15 @@ object NaaradUtils {
     var nodeID2Ndx: java.util.HashMap<Int?, Int?>? = null
 
     // Default time range of 2 days (in seconds)
+    var livePlotReSyncTimescale: Double = currentPlotReSyncTimescale; // To be used in loops
+    var currentPlotReSyncTimescale: Double             // User setting (infrequently changed)
+	get() = getPreference("reSyncTimescale", "1800.0")?.toDoubleOrNull() ?: 1800.0
+	set(value) {
+	    livePlotTimerange = value
+	    setPreference("reSyncTimescale", value.toString())
+	}
+
+    // Default time range of 2 days (in seconds)
     var livePlotTimerange: Double = currentPlotTimerange; // To be used in loops
     var currentPlotTimerange: Double             // User setting (infrequently changed)
 	get() = getPreference("plotTimerange", "172800.0")?.toDoubleOrNull() ?: 172800.0

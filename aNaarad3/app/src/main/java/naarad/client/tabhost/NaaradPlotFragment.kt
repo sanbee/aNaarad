@@ -434,25 +434,38 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
             // mySoc.close()
         }
 
+	inline private fun naaradGetSingleDataForNode(
+	    key: Int,
+	    mySoc: Socket) : String
+	{
+            val mySocWriter = PrintWriter(mySoc.getOutputStream(), true)
+            val mySocReader = BufferedReader(InputStreamReader(mySoc.getInputStream()), 100)
+
+            if (allDone || isCancelled) return ""
+            val msg = "getcpkt " + key
+            naaradWriter(mySocWriter, msg)
+            SystemClock.sleep(100)
+
+            val message = NaaradUtils.naaradReader(mySocReader,"getcpkt") ?: ""
+	    return message;
+	}
+
         private fun naaradGetDataOnlyEngine(
             keys: IntArray,
-            mySoc: Socket
-        ) {
+            mySoc: Socket)
+	{
             val mySocWriter = PrintWriter(mySoc.getOutputStream(), true)
             val mySocReader = BufferedReader(InputStreamReader(mySoc.getInputStream()), 100)
             naaradWriter(mySocWriter, "SensorDataSync")
             SystemClock.sleep(100)
 
             for (i in keys.indices) {
-                if (allDone || isCancelled) break
-                val msg = "getcpkt " + keys[i]
-                naaradWriter(mySocWriter, msg)
-                SystemClock.sleep(100)
+                // val message = NaaradUtils.naaradReader(mySocReader,"getcpkt")
+		val message = naaradGetSingleDataForNode(keys[i], mySoc);
 
-                val message = NaaradUtils.naaradReader(mySocReader,"getcpkt")
-                if (message != null && message.contains("{")) {
-                    publishJSON(message)
-                }
+		//Log.d("getDataOnlyEngine",message)
+                if (message != null && message.contains("{")) publishJSON(message);
+
             }
 
             naaradWriter(mySocWriter, "done")
@@ -488,6 +501,120 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
 	    }
         }
 
+	// inline private fun isMessageValid(message: String) : JSONObject
+	// {
+        //     val jsonStart = message.indexOf('{')
+        //     val jsonEnd = message.lastIndexOf('}')
+        //     if (jsonStart >= 0 && jsonEnd > jsonStart)
+	// 	return JSONObject(message.substring(jsonStart, jsonEnd + 1))
+	//     else
+	// 	throw(Exception("message is not valid: " + message))
+	// }
+
+	private fun parseTimestampFromMessage(message: String): Long
+	{
+	    return try
+	    {
+		val jsonStart = message.indexOf('{')
+		val jsonEnd = message.lastIndexOf('}')
+		//	if (isMessageValid(message)
+
+		if (jsonStart >= 0 && jsonEnd > jsonStart)
+		{
+		    val json = JSONObject(message.substring(jsonStart, jsonEnd + 1))
+		    var timestamp = json.optDouble("time", System.currentTimeMillis().toDouble())
+		    if (timestamp > 0 && timestamp < 10_000_000_000.0)
+		    {
+			timestamp *= 1000.0
+		    }
+		    timestamp.toLong()
+		}
+		else
+		{
+		    System.currentTimeMillis()
+		}
+	    }
+	    catch (e: Exception)
+	    {
+		System.currentTimeMillis()
+	    }
+	}
+
+	//
+	// Based on the time difference between latest data and the last
+	// plotted data, decide if historical data should be acquired and
+	// published.  If not, this acts like
+	// naaradGetData(keys,getHistory=false).
+	//
+	private fun syncData(keys: IntArray)
+	{
+	    if (keys.isEmpty() || allDone || isCancelled) return
+	    
+	    val host = NaaradUtils.serverName
+	    val port = NaaradUtils.serverPort
+	    if (activeSocket == null)
+		activeSocket = naaradSocket(host, port) ?: return
+	    
+	    try
+	    {
+		// 1. Acquire current message for the first node in keys
+		val firstNode = keys[0]
+		val firstMsg = naaradGetSingleDataForNode(firstNode, activeSocket!!)
+		// if (isMessageValid(firstMsg) throw(Exception("syncData: First message is not valid: "+message));
+		
+		if (firstMsg.contains("{"))
+		{
+		    // 2. Compute latestTimeMs for the first node
+		    val latestTimeMs = parseTimestampFromMessage(firstMsg)
+		    
+		    // 3. Get lastPlotTimeMs for the first node
+		    val map = NaaradUtils.nodeID2NdxMap
+		    val seriesIndex = map[firstNode] ?: 0
+		    val dataSet = mLineChart?.data?.getDataSetByIndex(seriesIndex) as? LineDataSet
+		    val lastPlotTimeMs = 0L
+		    if (dataSet != null && dataSet.entryCount > 0) dataSet.getEntryForIndex(dataSet.entryCount - 1).x.toLong()
+		    
+		    val timeDiff = latestTimeMs - lastPlotTimeMs
+		    
+		    // 4. Check if time difference > NaaradUtils.livePlotReSyncTimescale in sec converted to Ms
+		    if (lastPlotTimeMs > 0 && timeDiff > NaaradUtils.livePlotReSyncTimescale * 1000L)
+		    {
+			Log.d("syncData", "Gap of ${timeDiff / 60000}m > 30m for node $firstNode. Fetching history...")
+			// Fetch historical data for all nodes in keys
+			naaradGetData(keys, getHistory = true)
+		    }
+		    else
+		    {
+			// Publish message for the first node
+			publishJSON(firstMsg)
+			//Log.d("syncData "+keys[0].toString(),firstMsg)
+			
+			// Acquire and publish messages for the remaining nodes in keys
+			for (i in 1 until keys.size)
+			{
+			    if (allDone || isCancelled) break
+			    val restMsg = naaradGetSingleDataForNode(keys[i], activeSocket!!)
+			    if (restMsg.contains("{"))
+			    {
+				//Log.d("syncData "+keys[i].toString(),restMsg)
+				publishJSON(restMsg)
+			    }
+			}
+		    }
+		}
+	    }
+	    catch (e: Exception)
+	    {
+		Log.d("syncData", "Error in syncData: " + e.message)
+	    }
+	    // finally {
+	    //     try {
+	    //         activeSocket?.close()
+	    //     } catch (ignored: Exception) {}
+	    //     activeSocket = null
+	    // }
+	}
+
         override fun doInBackground(vararg params: Void?): String? {
             val retStr = "AllOK"
             allDone = false
@@ -495,9 +622,7 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
             sleeper.reset()
             val keys = getKeysAsArray(nodeID2NdxMap)
 
-            naaradGetData(keys, true)
-
-	    //            while (!allDone && !sleeper.isAborted) {
+            naaradGetData(keys, getHistory = true) // Get historical data
 
 	    // NaaradUtils.livePingTimeout is a cached version of
 	    // NaaradUtils.currentPingTimeout.  When the latter is
@@ -513,10 +638,14 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
                 sleeper.sleep(pingTO)
                 sleeper.reset()
 
-                //if (allDone || sleeper.isAborted) break
-		if (allDone) break
+		if (allDone) break 
 
-                naaradGetData(keys, false)
+		// Get historical data, or the latest data point
+		// depending on when the last plotted data was
+		// acquired.
+		syncData(keys); 
+
+		//naaradGetData(keys, false) // Get the latest data point
             }
 
             return retStr
