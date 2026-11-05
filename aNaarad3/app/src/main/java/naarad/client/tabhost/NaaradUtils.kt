@@ -22,36 +22,56 @@ object NaaradUtils {
     var prefs: SharedPreferences? = null
     var nodeID2Ndx: java.util.HashMap<Int?, Int?>? = null
 
-    // Default time range of 2 days (in seconds)
-    var livePlotReSyncTimescale: Double = currentPlotReSyncTimescale; // To be used in loops
+    // Default time range of 30 min (in seconds)
+    var livePlotReSyncTimescale: Double = currentPlotReSyncTimescale // To be used in loops
+    var currentPlotReSyncTimescaleStr: String
+        get() = getPreference("reSyncTimescale", "1800.0") ?: "1800.0"
+        set(value) {
+            setPreference("reSyncTimescale", value)
+            livePlotReSyncTimescale = parseHmsToSeconds(value)
+        }
     var currentPlotReSyncTimescale: Double             // User setting (infrequently changed)
-	get() = getPreference("reSyncTimescale", "1800.0")?.toDoubleOrNull() ?: 1800.0
-	set(value) {
-	    livePlotTimerange = value
-	    setPreference("reSyncTimescale", value.toString())
-	}
+        get() = parseHmsToSeconds(currentPlotReSyncTimescaleStr)
+        set(value) {
+            livePlotReSyncTimescale = value
+        }
 
     // Default time range of 2 days (in seconds)
-    var livePlotTimerange: Double = currentPlotTimerange; // To be used in loops
+    var livePlotTimerange: Double = currentPlotTimerange // To be used in loops
+    var currentPlotTimerangeStr: String
+        get() = getPreference("plotTimerange", "172800.0") ?: "172800.0"
+        set(value) {
+            setPreference("plotTimerange", value)
+            livePlotTimerange = parseHmsToSeconds(value)
+        }
     var currentPlotTimerange: Double             // User setting (infrequently changed)
-	get() = getPreference("plotTimerange", "172800.0")?.toDoubleOrNull() ?: 172800.0
-	set(value) {
-	    livePlotTimerange = value
-	    setPreference("plotTimerange", value.toString())
-	}
+        get() = parseHmsToSeconds(currentPlotTimerangeStr)
+        set(value) {
+            livePlotTimerange = value
+        }
 
     // Timeout in seconds used to ping the server for live sensor data
     var livePingTimeout: Double = currentPingTimeout // To be used in loops
-    var currentPingTimeout: Double                   // User setting (infrequently changed)
-	get() = getPreference("pingTimeout", "60.0")?.toDoubleOrNull() ?: 60.0
-	set(value) {
+    var currentPingTimeoutStr: String
+        get() = getPreference("pingTimeout", "60.0") ?: "60.0"
+        set(value) {
             val oldVal = livePingTimeout
-	    livePingTimeout = value
-	    setPreference("pingTimeout", value.toString())
+            setPreference("pingTimeout", value)
+            val newVal = parseHmsToSeconds(value)
+            livePingTimeout = newVal
+            if (oldVal != newVal) {
+                NaaradPlotFragment.activeInstance?.abortSleeperForTimeoutChange()
+            }
+        }
+    var currentPingTimeout: Double                   // User setting (infrequently changed)
+        get() = parseHmsToSeconds(currentPingTimeoutStr)
+        set(value) {
+            val oldVal = livePingTimeout
+            livePingTimeout = value
             if (oldVal != value) {
                 NaaradPlotFragment.activeInstance?.abortSleeperForTimeoutChange()
             }
-	}
+        }
 
     val defaultPort: Int
         get() = getPreference("serverPort", 1234)
@@ -114,19 +134,39 @@ object NaaradUtils {
     //
     //---------------------------------------------------------------------------------------------
     //
+    // Parses a time input string in HMS format (e.g., "1h30m20s", "1.5h", "10m", "45s", "120")
+    // and returns the total time in seconds as a Double.
+    //
+    // - H (Hours), M (Minutes), and S (Seconds) are all optional and case-insensitive.
+    // - If no unit suffix (H, M, S) is present (e.g. "120"), the input is treated as seconds.
+    fun parseHmsToSeconds(input: String): Double {
+	val text = input.trim()
+	if (text.isEmpty()) return 0.0
 
-    // fun getPreference(name: String?, defValue: Int): Int {
-    //     val ctx = NaaradAbstractFragment.mActivity ?: return defValue
-    //     prefs = ctx.getSharedPreferences("nSettings", Context.MODE_PRIVATE)
-    //     return prefs?.getInt(name, defValue) ?: defValue
-    // }
+	// Regex to capture optional hours (h/H), minutes (m/M), and seconds (s/S)
+	val regex = Regex("(?i)(?:([0-9.]+)\\s*h)?\\s*(?:([0-9.]+)\\s*m)?\\s*(?:([0-9.]+)\\s*s)?")
+	val match = regex.matchEntire(text)
 
-    // fun getPreference(name: String?, defValue: String?): String? {
-    //     val ctx = NaaradAbstractFragment.mActivity ?: return defValue
-    //     prefs = ctx.getSharedPreferences("nSettings", Context.MODE_PRIVATE)
-    //     return prefs?.getString(name, defValue) ?: defValue
-    // }
+	if (match != null) {
+            val hStr = match.groupValues[1]
+            val mStr = match.groupValues[2]
+            val sStr = match.groupValues[3]
 
+            // If at least one HMS unit was present in the input
+            if (hStr.isNotEmpty() || mStr.isNotEmpty() || sStr.isNotEmpty()) {
+		val hours = hStr.toDoubleOrNull() ?: 0.0
+		val minutes = mStr.toDoubleOrNull() ?: 0.0
+		val seconds = sStr.toDoubleOrNull() ?: 0.0
+		return (hours * 3600.0) + (minutes * 60.0) + seconds
+            }
+	}
+
+	// Fallback: If no H, M, or S suffix was provided (e.g., "120"), treat as raw seconds
+	return text.toDoubleOrNull() ?: 0.0
+    }
+    //
+    //---------------------------------------------------------------------------------------------
+    //
     val nodeID2NdxMap: HashMap<Int?, Int?>
         get() {
             val map = HashMap<Int?, Int?>()
@@ -135,7 +175,9 @@ object NaaradUtils {
             nodeID2Ndx = map
             return map
         }
-
+    //
+    //---------------------------------------------------------------------------------------------
+    //
     @Suppress("UNCHECKED_CAST")
     fun getKeysAsArray(myMap: java.util.HashMap<*, *>): IntArray {
         val keys: MutableSet<Int> = myMap.keys as MutableSet<Int>
@@ -144,34 +186,44 @@ object NaaradUtils {
         for (element in keys) array[index++] = element
         return array
     }
-
+    //
+    //---------------------------------------------------------------------------------------------
+    //
     fun mapNodeID2Ndx(nodeid: Int): Int {
         if (nodeid == 1) return 0
         if (nodeid == 3) return 1
         return Math.abs(nodeid) % 2
     }
-
+    //
+    //---------------------------------------------------------------------------------------------
+    //
     fun recreateView(v: View?): Boolean {
         if (v != null) {
             (v.parent as ViewGroup).removeView(v)
             return true
         } else return false
     }
-
+    //
+    //---------------------------------------------------------------------------------------------
+    //
     fun mkMessage(message: String): String {
         val n = message.length
         val lenStr = n.toString()
         val totalLen = lenStr.length + n + 1
         return totalLen.toString() + " " + message
     }
-
+    //
+    //---------------------------------------------------------------------------------------------
+    //
     fun toast(msg: String?, gravity: Int) {
         val ctx = NaaradAbstractFragment.mActivity ?: return
         val mToast: Toast = Toast.makeText(ctx, msg, Toast.LENGTH_SHORT)
         mToast.setGravity(gravity, 0, 0)
         mToast.show()
     }
-
+    //
+    //---------------------------------------------------------------------------------------------
+    //
     fun uiToast(msg: String?, gravity: Int) {
         class ToastOnUIThread(var thisText: String?, var thisGravity: Int) : Runnable {
             override fun run() {
@@ -180,7 +232,9 @@ object NaaradUtils {
         }
         NaaradAbstractFragment.mActivity?.runOnUiThread(ToastOnUIThread(msg, gravity))
     }
-
+    //
+    //---------------------------------------------------------------------------------------------
+    //
     val isWifiConnected: Boolean
         get() {
             val ctx = NaaradAbstractFragment.mActivity ?: return false
@@ -188,7 +242,9 @@ object NaaradUtils {
             val mWifi: NetworkInfo? = connManager?.getNetworkInfo(ConnectivityManager.TYPE_WIFI)
             return mWifi?.isConnected == true
         }
-
+    //
+    //---------------------------------------------------------------------------------------------
+    //
     @Throws(IOException::class)
     fun naaradReader_kt(socReader: BufferedReader): String? {
         val lenBuf = StringBuilder()
@@ -214,7 +270,9 @@ object NaaradUtils {
 
         return "${lenBuf} ${bodyBuf.toString().trim()}"
     }
-
+    //
+    //---------------------------------------------------------------------------------------------
+    //
     @Throws(IOException::class)
     fun naaradReader(socReader: BufferedReader,
 		     tag: String=""): String
@@ -294,14 +352,17 @@ object NaaradUtils {
 	    return "";
 	}
     }
-
-
+    //
+    //---------------------------------------------------------------------------------------------
+    //
     @Throws(IOException::class, UnknownHostException::class)
     fun naaradWriter(socWriter: PrintWriter, message: String) {
         socWriter.write(mkMessage(message))
         socWriter.flush()
     }
-
+    //
+    //---------------------------------------------------------------------------------------------
+    //
     fun naaradSocket(hostName: String?, port: Int): Socket? {
         if (hostName.isNullOrEmpty() || port <= 0) return null
         return try {
@@ -313,7 +374,9 @@ object NaaradUtils {
             null
         }
     }
-
+    //
+    //---------------------------------------------------------------------------------------------
+    //
     fun isCleartextPermittedForHost(host: String): Boolean {
 	return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             // Checks the exact host against your NetworkSecurityConfig XML rules

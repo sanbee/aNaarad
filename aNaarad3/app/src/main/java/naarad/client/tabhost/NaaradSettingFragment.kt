@@ -25,6 +25,8 @@ class NaaradSettingFragment : NaaradAbstractFragment() {
     private var serverNameField: EditText? = null
     private var serverPortField: EditText? = null
     private var pingTimeoutField: EditText? = null
+    private var plotTimerangeField: EditText? = null
+    private var reSyncTimescaleField: EditText? = null
     private var setButton: Button? = null
     private var wakeButton: CheckBox? = null
     private var wifiControl: CheckBox? = null
@@ -54,6 +56,8 @@ class NaaradSettingFragment : NaaradAbstractFragment() {
             // keep existing port
         }
         validateAndUpdatePingTimeout()
+        validateAndUpdatePlotTimerange()
+        validateAndUpdateReSyncTimescale()
     }
 
     private fun hideKeyboard(v: View) {
@@ -62,18 +66,50 @@ class NaaradSettingFragment : NaaradAbstractFragment() {
     }
 
     private fun validateAndUpdatePingTimeout() {
-        val inputStr = pingTimeoutField?.text?.toString()?.trim()
-        val numVal = inputStr?.toDoubleOrNull()
-        if (numVal != null && numVal > 0.0) {
+        val inputStr = pingTimeoutField?.text?.toString()?.trim() ?: ""
+        val secVal = NaaradUtils.parseHmsToSeconds(inputStr)
+        if (secVal > 0.0) {
             val oldVal = NaaradUtils.currentPingTimeout
-            NaaradUtils.currentPingTimeout = numVal
-            pingTimeoutField?.setText(numVal.toString())
-            if (oldVal != numVal) {
-                toast("Setting saved: Ping timeout = $numVal sec", Gravity.BOTTOM)
+            NaaradUtils.currentPingTimeoutStr = inputStr
+            pingTimeoutField?.setText(inputStr)
+            if (oldVal != secVal) {
+                toast("Setting saved: Ping timeout = $inputStr (${secVal}s)", Gravity.BOTTOM)
             }
         } else {
-            val lastValid = NaaradUtils.currentPingTimeout
-            pingTimeoutField?.setText(lastValid.toString())
+            val lastValidStr = NaaradUtils.currentPingTimeoutStr
+            pingTimeoutField?.setText(lastValidStr)
+        }
+    }
+
+    private fun validateAndUpdatePlotTimerange() {
+        val inputStr = plotTimerangeField?.text?.toString()?.trim() ?: ""
+        val secVal = NaaradUtils.parseHmsToSeconds(inputStr)
+        if (secVal > 0.0) {
+            val oldVal = NaaradUtils.currentPlotTimerange
+            NaaradUtils.currentPlotTimerangeStr = inputStr
+            plotTimerangeField?.setText(inputStr)
+            if (oldVal != secVal) {
+                toast("Setting saved: Plot timerange = $inputStr (${secVal}s)", Gravity.BOTTOM)
+            }
+        } else {
+            val lastValidStr = NaaradUtils.currentPlotTimerangeStr
+            plotTimerangeField?.setText(lastValidStr)
+        }
+    }
+
+    private fun validateAndUpdateReSyncTimescale() {
+        val inputStr = reSyncTimescaleField?.text?.toString()?.trim() ?: ""
+        val secVal = NaaradUtils.parseHmsToSeconds(inputStr)
+        if (secVal > 0.0) {
+            val oldVal = NaaradUtils.currentPlotReSyncTimescale
+            NaaradUtils.currentPlotReSyncTimescaleStr = inputStr
+            reSyncTimescaleField?.setText(inputStr)
+            if (oldVal != secVal) {
+                toast("Setting saved: ReSync timescale = $inputStr (${secVal}s)", Gravity.BOTTOM)
+            }
+        } else {
+            val lastValidStr = NaaradUtils.currentPlotReSyncTimescaleStr
+            reSyncTimescaleField?.setText(lastValidStr)
         }
     }
 
@@ -201,7 +237,7 @@ class NaaradSettingFragment : NaaradAbstractFragment() {
         if (pingId != 0) {
             pingTimeoutField = mView?.findViewById(pingId)
         }
-        pingTimeoutField?.setText(NaaradUtils.livePingTimeout.toString())
+        pingTimeoutField?.setText(NaaradUtils.currentPingTimeoutStr)
 
         pingTimeoutField?.setOnEditorActionListener { v, actionId, event ->
             if (actionId == EditorInfo.IME_ACTION_DONE || actionId == EditorInfo.IME_ACTION_NEXT ||
@@ -219,6 +255,56 @@ class NaaradSettingFragment : NaaradAbstractFragment() {
         pingTimeoutField?.setOnFocusChangeListener { _, hasFocus ->
             if (!hasFocus) {
                 validateAndUpdatePingTimeout()
+            }
+        }
+
+        val plotRangeId = resources.getIdentifier("plotTimerange", "id", requireContext().packageName)
+        if (plotRangeId != 0) {
+            plotTimerangeField = mView?.findViewById(plotRangeId)
+        }
+        plotTimerangeField?.setText(NaaradUtils.currentPlotTimerangeStr)
+
+        plotTimerangeField?.setOnEditorActionListener { v, actionId, event ->
+            if (actionId == EditorInfo.IME_ACTION_DONE || actionId == EditorInfo.IME_ACTION_NEXT ||
+                (event != null && event.keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_DOWN)
+            ) {
+                validateAndUpdatePlotTimerange()
+                hideKeyboard(v)
+                v.clearFocus()
+                true
+            } else {
+                false
+            }
+        }
+
+        plotTimerangeField?.setOnFocusChangeListener { _, hasFocus ->
+            if (!hasFocus) {
+                validateAndUpdatePlotTimerange()
+            }
+        }
+
+        val reSyncId = resources.getIdentifier("reSyncTimescale", "id", requireContext().packageName)
+        if (reSyncId != 0) {
+            reSyncTimescaleField = mView?.findViewById(reSyncId)
+        }
+        reSyncTimescaleField?.setText(NaaradUtils.currentPlotReSyncTimescaleStr)
+
+        reSyncTimescaleField?.setOnEditorActionListener { v, actionId, event ->
+            if (actionId == EditorInfo.IME_ACTION_DONE || actionId == EditorInfo.IME_ACTION_NEXT ||
+                (event != null && event.keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_DOWN)
+            ) {
+                validateAndUpdateReSyncTimescale()
+                hideKeyboard(v)
+                v.clearFocus()
+                true
+            } else {
+                false
+            }
+        }
+
+        reSyncTimescaleField?.setOnFocusChangeListener { _, hasFocus ->
+            if (!hasFocus) {
+                validateAndUpdateReSyncTimescale()
             }
         }
 
