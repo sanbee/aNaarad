@@ -25,7 +25,7 @@ object NaaradUtils {
     // Default time range of 30 min (in seconds)
     var livePlotReSyncTimescale: Double = currentPlotReSyncTimescale // To be used in loops
     var currentPlotReSyncTimescaleStr: String
-        get() = getPreference("reSyncTimescale", "1800.0") ?: "1800.0"
+        get() = getPreference("reSyncTimescale", "30m") ?: "30m"
         set(value) {
             setPreference("reSyncTimescale", value)
             livePlotReSyncTimescale = parseHmsToSeconds(value)
@@ -39,7 +39,7 @@ object NaaradUtils {
     // Default time range of 2 days (in seconds)
     var livePlotTimerange: Double = currentPlotTimerange // To be used in loops
     var currentPlotTimerangeStr: String
-        get() = getPreference("plotTimerange", "172800.0") ?: "172800.0"
+        get() = getPreference("plotTimerange", "2d") ?: "2d"
         set(value) {
             setPreference("plotTimerange", value)
             livePlotTimerange = parseHmsToSeconds(value)
@@ -51,9 +51,12 @@ object NaaradUtils {
         }
 
     // Timeout in seconds used to ping the server for live sensor data
+    // If a new values is set, it also interrupts the ISleep.sleep()
+    // in NPF::doInBackgroupd() which then gets then instantly gets
+    // the new value.
     var livePingTimeout: Double = currentPingTimeout // To be used in loops
     var currentPingTimeoutStr: String
-        get() = getPreference("pingTimeout", "60.0") ?: "60.0"
+        get() = getPreference("pingTimeout", "1m") ?: "1m"
         set(value) {
             val oldVal = livePingTimeout
             setPreference("pingTimeout", value)
@@ -110,7 +113,7 @@ object NaaradUtils {
             is Float -> editor.putFloat(name, value)
             else -> throw IllegalArgumentException("Unsupported preference type: ${T::class.java.name}")
 	}
-	
+
 	editor.apply() // Highly recommended over commit() to prevent UI freezing
     }
 
@@ -119,7 +122,7 @@ object NaaradUtils {
     inline fun <reified T> getPreference(name: String?, defValue: T): T {
 	val ctx = NaaradAbstractFragment.mActivity ?: return defValue
 	val prefs: SharedPreferences = ctx.getSharedPreferences("nSettings", Context.MODE_PRIVATE)
-	
+
 	val result: Any? = when (T::class) {
             String::class -> prefs.getString(name, defValue as? String)
             Int::class -> prefs.getInt(name, defValue as Int)
@@ -128,40 +131,44 @@ object NaaradUtils {
             Float::class -> prefs.getFloat(name, defValue as Float)
             else -> throw IllegalArgumentException("Unsupported preference type: ${T::class.java.name}")
 	}
-	
+
 	return (result as? T) ?: defValue
     }
     //
     //---------------------------------------------------------------------------------------------
     //
-    // Parses a time input string in HMS format (e.g., "1h30m20s", "1.5h", "10m", "45s", "120")
-    // and returns the total time in seconds as a Double.
+    // Parses a time input string in DHMS format (e.g., "1d2h33m21s",
+    // "1h30m20s", "2.1d", "1.5h", "10m", "45s", "120") and returns
+    // the total time in seconds as a Double.
     //
-    // - H (Hours), M (Minutes), and S (Seconds) are all optional and case-insensitive.
-    // - If no unit suffix (H, M, S) is present (e.g. "120"), the input is treated as seconds.
+    // - D (days) H (Hours), M (Minutes), and S (Seconds) are all
+    // optional and case-insensitive.  - If no unit suffix (D, H, M, S)
+    // is present (e.g. "120"), the input is treated as seconds.
     fun parseHmsToSeconds(input: String): Double {
 	val text = input.trim()
 	if (text.isEmpty()) return 0.0
 
-	// Regex to capture optional hours (h/H), minutes (m/M), and seconds (s/S)
-	val regex = Regex("(?i)(?:([0-9.]+)\\s*h)?\\s*(?:([0-9.]+)\\s*m)?\\s*(?:([0-9.]+)\\s*s)?")
+	// Regex to capture optional days (d/D), hours (h/H), minutes (m/M), and seconds (s/S)
+	val regex = Regex("(?i)(?:([0-9.]+)\\s*d)?\\s*(?:([0-9.]+)\\s*h)?\\s*(?:([0-9.]+)\\s*m)?\\s*(?:([0-9.]+)\\s*s)?")
 	val match = regex.matchEntire(text)
 
 	if (match != null) {
-            val hStr = match.groupValues[1]
-            val mStr = match.groupValues[2]
-            val sStr = match.groupValues[3]
+            val dStr = match.groupValues[1]
+            val hStr = match.groupValues[2]
+            val mStr = match.groupValues[3]
+            val sStr = match.groupValues[4]
 
             // If at least one HMS unit was present in the input
-            if (hStr.isNotEmpty() || mStr.isNotEmpty() || sStr.isNotEmpty()) {
+            if (dStr.isNotEmpty() || hStr.isNotEmpty() || mStr.isNotEmpty() || sStr.isNotEmpty()) {
+		val days = dStr.toDoubleOrNull() ?: 0.0
 		val hours = hStr.toDoubleOrNull() ?: 0.0
 		val minutes = mStr.toDoubleOrNull() ?: 0.0
 		val seconds = sStr.toDoubleOrNull() ?: 0.0
-		return (hours * 3600.0) + (minutes * 60.0) + seconds
+		return (days * 3600*24) + (hours * 3600.0) + (minutes * 60.0) + seconds
             }
 	}
 
-	// Fallback: If no H, M, or S suffix was provided (e.g., "120"), treat as raw seconds
+	// Fallback: If no D, H, M, or S suffix was provided (e.g., "120"), treat as raw seconds
 	return text.toDoubleOrNull() ?: 0.0
     }
     //

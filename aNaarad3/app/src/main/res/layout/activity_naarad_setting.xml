@@ -58,7 +58,7 @@
        android:layout_height="wrap_content"
        android:layout_below="@+id/wake"
        android:layout_marginTop="16dp"
-       android:text="Ping Timeout (sec): " />
+       android:text="Ping Timeout: " />
 
     <EditText
        android:id="@+id/pingTimeout"
@@ -67,7 +67,43 @@
        android:layout_toRightOf="@+id/pingTimeoutLabel"
        android:layout_alignBaseline="@+id/pingTimeoutLabel"
        android:ems="6"
-       android:inputType="numberDecimal"
+       android:inputType="text"
+       android:imeOptions="actionDone" />
+
+    <TextView
+       android:id="@+id/plotTimerangeLabel"
+       android:layout_width="wrap_content"
+       android:layout_height="wrap_content"
+       android:layout_below="@+id/pingTimeoutLabel"
+       android:layout_marginTop="16dp"
+       android:text="Plot Timerange: " />
+
+    <EditText
+       android:id="@+id/plotTimerange"
+       android:layout_width="wrap_content"
+       android:layout_height="wrap_content"
+       android:layout_toRightOf="@+id/plotTimerangeLabel"
+       android:layout_alignBaseline="@+id/plotTimerangeLabel"
+       android:ems="6"
+       android:inputType="text"
+       android:imeOptions="actionDone" />
+
+    <TextView
+       android:id="@+id/reSyncTimescaleLabel"
+       android:layout_width="wrap_content"
+       android:layout_height="wrap_content"
+       android:layout_below="@+id/plotTimerangeLabel"
+       android:layout_marginTop="16dp"
+       android:text="ReSync Timescale: " />
+
+    <EditText
+       android:id="@+id/reSyncTimescale"
+       android:layout_width="wrap_content"
+       android:layout_height="wrap_content"
+       android:layout_toRightOf="@+id/reSyncTimescaleLabel"
+       android:layout_alignBaseline="@+id/reSyncTimescaleLabel"
+       android:ems="6"
+       android:inputType="text"
        android:imeOptions="actionDone" />
 
 </RelativeLayout>

@@ -549,37 +549,40 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
 	private fun syncData(keys: IntArray)
 	{
 	    if (keys.isEmpty() || allDone || isCancelled) return
-	    
 	    val host = NaaradUtils.serverName
 	    val port = NaaradUtils.serverPort
 	    if (activeSocket == null)
 		activeSocket = naaradSocket(host, port) ?: return
-	    
+
 	    try
 	    {
 		// 1. Acquire current message for the first node in keys
 		val firstNode = keys[0]
 		val firstMsg = naaradGetSingleDataForNode(firstNode, activeSocket!!)
 		// if (isMessageValid(firstMsg) throw(Exception("syncData: First message is not valid: "+message));
-		
+
 		if (firstMsg.contains("{"))
 		{
 		    // 2. Compute latestTimeMs for the first node
 		    val latestTimeMs = parseTimestampFromMessage(firstMsg)
-		    
+
 		    // 3. Get lastPlotTimeMs for the first node
 		    val map = NaaradUtils.nodeID2NdxMap
 		    val seriesIndex = map[firstNode] ?: 0
 		    val dataSet = mLineChart?.data?.getDataSetByIndex(seriesIndex) as? LineDataSet
-		    val lastPlotTimeMs = 0L
-		    if (dataSet != null && dataSet.entryCount > 0) dataSet.getEntryForIndex(dataSet.entryCount - 1).x.toLong()
-		    
-		    val timeDiff = latestTimeMs - lastPlotTimeMs
-		    
+
+		    val lastPlotTimeMs =
+			if (dataSet != null && dataSet.entryCount > 0)
+			   dataSet.getEntryForIndex(dataSet.entryCount - 1).x.toLong()
+			else 0L;
+
+		    val timeDiffMs = latestTimeMs - lastPlotTimeMs
+		    // Log.d("syncData",
+		    // 	  " Gap of ${timeDiffMs / 60000}m for node $firstNode, SyncTimescale: ${NaaradUtils.livePlotReSyncTimescale * 1000L/60000}m.")
 		    // 4. Check if time difference > NaaradUtils.livePlotReSyncTimescale in sec converted to Ms
-		    if (lastPlotTimeMs > 0 && timeDiff > NaaradUtils.livePlotReSyncTimescale * 1000L)
+		    if (lastPlotTimeMs > 0 && timeDiffMs > NaaradUtils.livePlotReSyncTimescale * 1000L)
 		    {
-			Log.d("syncData", "Gap of ${timeDiff / 60000}m > 30m for node $firstNode. Fetching history...")
+			Log.d("syncData", "Gap of ${timeDiffMs / 60000}m > ${NaaradUtils.livePlotReSyncTimescale * 1000L/60000}m for node $firstNode. Fetching history...")
 			// Fetch historical data for all nodes in keys
 			naaradGetData(keys, getHistory = true)
 		    }
@@ -588,7 +591,7 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
 			// Publish message for the first node
 			publishJSON(firstMsg)
 			//Log.d("syncData "+keys[0].toString(),firstMsg)
-			
+
 			// Acquire and publish messages for the remaining nodes in keys
 			for (i in 1 until keys.size)
 			{
@@ -638,12 +641,12 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
                 sleeper.sleep(pingTO)
                 sleeper.reset()
 
-		if (allDone) break 
+		if (allDone) break
 
 		// Get historical data, or the latest data point
 		// depending on when the last plotted data was
 		// acquired.
-		syncData(keys); 
+		syncData(keys);
 
 		//naaradGetData(keys, false) // Get the latest data point
             }
