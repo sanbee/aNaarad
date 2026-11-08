@@ -398,8 +398,12 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
             mySoc: Socket
         ) {
             val mySocWriter = PrintWriter(mySoc.getOutputStream(), true)
-            val mySocReader = BufferedReader(InputStreamReader(mySoc.getInputStream()), 100)
-            naaradWriter(mySocWriter, "SensorDataSync")
+            val mySocReader = BufferedReader(InputStreamReader(mySoc.getInputStream()), 1000)
+	    // Send the name for connection request.  This is required
+	    // for the server to establish a connection with this
+	    // name.
+            naaradWriter(mySocWriter, "NaaradDataSync_H")
+
             SystemClock.sleep(100)
 
             var nPackets: Int = 0
@@ -439,7 +443,8 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
 	    mySoc: Socket) : String
 	{
             val mySocWriter = PrintWriter(mySoc.getOutputStream(), true)
-            val mySocReader = BufferedReader(InputStreamReader(mySoc.getInputStream()), 100)
+            val mySocReader = BufferedReader(InputStreamReader(mySoc.getInputStream()), 1000)
+            naaradWriter(mySocWriter, "NaaradDataSync_N")
 
             if (allDone || isCancelled) return ""
             val msg = "getcpkt " + key
@@ -454,13 +459,20 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
             keys: IntArray,
             mySoc: Socket)
 	{
-            val mySocWriter = PrintWriter(mySoc.getOutputStream(), true)
-            val mySocReader = BufferedReader(InputStreamReader(mySoc.getInputStream()), 100)
-            naaradWriter(mySocWriter, "SensorDataSync")
-            SystemClock.sleep(100)
+            // val mySocWriter = PrintWriter(mySoc.getOutputStream(), true)
+            // val mySocReader = BufferedReader(InputStreamReader(mySoc.getInputStream()), 1000)
+
+	    // // Send the name for connection request.  This is required
+	    // // for the server to establish a connection with this
+	    // // name.
+            // naaradWriter(mySocWriter, "NaaradDataSync")
+
+            // SystemClock.sleep(100)
 
             for (i in keys.indices) {
-                // val message = NaaradUtils.naaradReader(mySocReader,"getcpkt")
+		// val request: String="getcpkt "+keys[i].toString,
+		// naaradWriter(mySocWriter, request)
+                // val message = NaaradUtils.naaradReader(mySocReader,tag="getcpkt")
 		val message = naaradGetSingleDataForNode(keys[i], mySoc);
 
 		//Log.d("getDataOnlyEngine",message)
@@ -468,7 +480,8 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
 
             }
 
-            naaradWriter(mySocWriter, "done")
+//            naaradWriter(mySocWriter, "done")
+
 	    // try
 	    // {
 	    // 	mySoc.close()
@@ -477,6 +490,39 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
 	    // {}
             // activeSocket = null
         }
+
+// private fun naaradGetDataOnlyEngine(
+//     keys: IntArray,
+//     mySoc: Socket): ArrayList<String>
+// {
+//     val messagesList = ArrayList<String>()
+//     val mySocWriter = PrintWriter(mySoc.getOutputStream(), true)
+// //    val mySocReader = BufferedReader(InputStreamReader(mySoc.getInputStream
+
+//     for (i in keys.indices)
+//     {
+//         if (allDone || isCancelled) break
+
+//         // Get single data message for node keys[i]
+//         val message = naaradGetSingleDataForNode(keys[i], mySoc)
+
+//         if (message.isNotEmpty())
+// 	{
+//             if (message != null && message.contains("{")) publishJSON(message);
+//             messagesList.add(message)
+//         }
+//     }
+
+//     // Send done signal to the server when finished querying all nodes
+//     try
+//     {
+//         val mySocWriter = PrintWriter(mySoc.getOutputStream(), true)
+//         naaradWriter(mySocWriter, "done")
+//     }
+//     catch (ignored: Exception) {}
+
+//     return messagesList
+// }
 
         private fun naaradGetData(
             keys: IntArray,
@@ -589,7 +635,7 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
 		    else
 		    {
 			// Publish message for the first node
-			publishJSON(firstMsg)
+			if (firstMsg != null && firstMsg.contains("{")) publishJSON(firstMsg);
 			//Log.d("syncData "+keys[0].toString(),firstMsg)
 
 			// Acquire and publish messages for the remaining nodes in keys
@@ -600,7 +646,7 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
 			    if (restMsg.contains("{"))
 			    {
 				//Log.d("syncData "+keys[i].toString(),restMsg)
-				publishJSON(restMsg)
+				if (restMsg != null && restMsg.contains("{")) publishJSON(restMsg);
 			    }
 			}
 		    }
@@ -648,7 +694,7 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
 		// acquired.
 		syncData(keys);
 
-		//naaradGetData(keys, false) // Get the latest data point
+//		naaradGetData(keys, false) // Get the latest data point
             }
 
             return retStr
