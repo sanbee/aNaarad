@@ -402,7 +402,7 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
 	    // Send the name for connection request.  This is required
 	    // for the server to establish a connection with this
 	    // name.
-            naaradWriter(mySocWriter, "NaaradDataSync_H")
+            naaradWriter(mySocWriter, message="NaaradApp_GetHistroyEngine")
 
             SystemClock.sleep(100)
 
@@ -438,6 +438,9 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
             // mySoc.close()
         }
 
+	// !!!
+	// !!! CAN BE DEPRECATED AFTER ITS USE IS REPLACED WITH naaradGetDataOnlyEngine()
+	// !!!
 	inline private fun naaradGetSingleDataForNode(
 	    key: Int,
 	    mySoc: Socket) : String
@@ -455,74 +458,49 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
 	    return message;
 	}
 
-        private fun naaradGetDataOnlyEngine(
-            keys: IntArray,
-            mySoc: Socket)
+	//
+	// Get the current (latest) data packet for each node in the keys.
+	// Valid messages are also published.
+	//
+	// The messages received are returned as an array of messages.
+	//
+	private fun naaradGetDataOnlyEngine(
+	    keys: IntArray,
+	    mySoc: Socket): ArrayList<String>
 	{
-            // val mySocWriter = PrintWriter(mySoc.getOutputStream(), true)
-            // val mySocReader = BufferedReader(InputStreamReader(mySoc.getInputStream()), 1000)
+	    val messagesList = ArrayList<String>()
+	    val mySocWriter = PrintWriter(mySoc.getOutputStream(), true)
+	    val mySocReader = BufferedReader(InputStreamReader(mySoc.getInputStream()),1000)
 
-	    // // Send the name for connection request.  This is required
-	    // // for the server to establish a connection with this
-	    // // name.
-            // naaradWriter(mySocWriter, "NaaradDataSync")
+	    naaradWriter(mySocWriter, message="NaaradApp_GetCurrentDataEngine")
 
-            // SystemClock.sleep(100)
+	    for (i in keys.indices)
+	    {
+		if (allDone || isCancelled) break
 
-            for (i in keys.indices) {
-		// val request: String="getcpkt "+keys[i].toString,
-		// naaradWriter(mySocWriter, request)
-                // val message = NaaradUtils.naaradReader(mySocReader,tag="getcpkt")
-		val message = naaradGetSingleDataForNode(keys[i], mySoc);
+		// Get single data message for node keys[i]
+		val request: String="getcpkt "+keys[i].toString()
+		naaradWriter(mySocWriter, request)
+		val message = NaaradUtils.naaradReader(mySocReader, tag="getcpkt")
+		
+		// If the message is valid, publish it and add the messages list.
+		if (message.isNotEmpty())
+		{
+		    if (message != null && message.contains("{")) publishJSON(message);
+		    messagesList.add(message)
+		}
+	    }
 
-		//Log.d("getDataOnlyEngine",message)
-                if (message != null && message.contains("{")) publishJSON(message);
+	    // Send done signal to the server when finished querying all nodes
+	    try
+	    {
+		//        val mySocWriter = PrintWriter(mySoc.getOutputStream(), true)
+		naaradWriter(mySocWriter, "done")
+	    }
+	    catch (ignored: Exception) {}
 
-            }
-
-//            naaradWriter(mySocWriter, "done")
-
-	    // try
-	    // {
-	    // 	mySoc.close()
-	    // }
-	    // catch (ignored: Exception)
-	    // {}
-            // activeSocket = null
-        }
-
-// private fun naaradGetDataOnlyEngine(
-//     keys: IntArray,
-//     mySoc: Socket): ArrayList<String>
-// {
-//     val messagesList = ArrayList<String>()
-//     val mySocWriter = PrintWriter(mySoc.getOutputStream(), true)
-// //    val mySocReader = BufferedReader(InputStreamReader(mySoc.getInputStream
-
-//     for (i in keys.indices)
-//     {
-//         if (allDone || isCancelled) break
-
-//         // Get single data message for node keys[i]
-//         val message = naaradGetSingleDataForNode(keys[i], mySoc)
-
-//         if (message.isNotEmpty())
-// 	{
-//             if (message != null && message.contains("{")) publishJSON(message);
-//             messagesList.add(message)
-//         }
-//     }
-
-//     // Send done signal to the server when finished querying all nodes
-//     try
-//     {
-//         val mySocWriter = PrintWriter(mySoc.getOutputStream(), true)
-//         naaradWriter(mySocWriter, "done")
-//     }
-//     catch (ignored: Exception) {}
-
-//     return messagesList
-// }
+	    return messagesList
+	}
 
         private fun naaradGetData(
             keys: IntArray,
@@ -536,7 +514,14 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
 		activeSocket = naaradSocket(host, port) ?: return
             try {
                 if (getHistory) naaradGetDataHistoryEngine(keys, activeSocket!!)
-                else naaradGetDataOnlyEngine(keys, activeSocket!!)
+                else
+		{
+		    val messages=naaradGetDataOnlyEngine(keys, activeSocket!!)
+		    for (m in messages)
+		    {
+			Log.d("naaradGetDat", m)
+		    }
+		}
             } catch (e: Exception) {
                 Log.d("naaradGetData", "Error: " + e.message)
             } finally {
@@ -692,9 +677,9 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
 		// Get historical data, or the latest data point
 		// depending on when the last plotted data was
 		// acquired.
-		syncData(keys);
+		//syncData(keys);
 
-//		naaradGetData(keys, false) // Get the latest data point
+		naaradGetData(keys, false) // Get the latest data point
             }
 
             return retStr
