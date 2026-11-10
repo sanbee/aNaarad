@@ -237,17 +237,17 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
         val entryCount = dataSet.entryCount
         if (entryCount > 0) {
             val lastEntry = dataSet.getEntryForIndex(entryCount - 1)
-            // If the sensor value did not change, don't make a new entry.
-            if (y.toFloat() == lastEntry.y) {
+            // If the sensor value did not change don't make a new entry
+            //if ((y.toFloat() == lastEntry.y) && ((x.toFloat() - lastEntry.y)/1000F < NaaradUtils.NEW_PLOT_DATA_TIMESCALE))
+            if ((y.toFloat() == lastEntry.y))
                 return
-            }
         }
 
         // 1. Add the new data point
         dataSet.addEntry(Entry(x.toFloat(), y.toFloat()))
 
-        // 2. Remove all points older than 2 days relative to the new point x
-        // val maxSpanSeconds = 2 * 24 * 3600 // 2 days in seconds
+        // 2. Remove all points older than user-defined
+        // NaaradUtils.livePlotTimeRange, relative to the new point x
         val newXSec = x.toFloat() / 1000f
         while (dataSet.entryCount > 1) {
             val firstXSec = dataSet.getEntryForIndex(0).x / 1000f
@@ -439,7 +439,7 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
         }
 
 	// !!!
-	// !!! CAN BE DEPRECATED AFTER ITS USE IS REPLACED WITH naaradGetDataOnlyEngine()
+	// !!! CAN BE DEPRECATED AFTER ITS USE IS REPLACED WITH naaradGetCurrentDataEngine()
 	// !!!
 	inline private fun naaradGetSingleDataForNode(
 	    key: Int,
@@ -464,9 +464,10 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
 	//
 	// The messages received are returned as an array of messages.
 	//
-	private fun naaradGetDataOnlyEngine(
+	private fun naaradGetCurrentDataEngine(
 	    keys: IntArray,
-	    mySoc: Socket): ArrayList<String>
+	    mySoc: Socket,
+	    publish: Boolean = true): ArrayList<String>
 	{
 	    val messagesList = ArrayList<String>()
 	    val mySocWriter = PrintWriter(mySoc.getOutputStream(), true)
@@ -482,11 +483,11 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
 		val request: String="getcpkt "+keys[i].toString()
 		naaradWriter(mySocWriter, request)
 		val message = NaaradUtils.naaradReader(mySocReader, tag="getcpkt")
-		
+
 		// If the message is valid, publish it and add the messages list.
 		if (message.isNotEmpty())
 		{
-		    if (message != null && message.contains("{")) publishJSON(message);
+		    if (message != null && message.contains("{") && publish) publishJSON(message);
 		    messagesList.add(message)
 		}
 	    }
@@ -498,7 +499,12 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
 		naaradWriter(mySocWriter, "done")
 	    }
 	    catch (ignored: Exception) {}
-
+	    finally {
+                try {
+		    activeSocket?.close()
+                } catch (ignored: Exception) {}
+                activeSocket = null
+	    }
 	    return messagesList
 	}
 
@@ -516,7 +522,7 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
                 if (getHistory) naaradGetDataHistoryEngine(keys, activeSocket!!)
                 else
 		{
-		    val messages=naaradGetDataOnlyEngine(keys, activeSocket!!)
+		    val messages=naaradGetCurrentDataEngine(keys, activeSocket!!)
 		    for (m in messages)
 		    {
 			Log.d("naaradGetDat", m)
@@ -588,18 +594,39 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
 	    try
 	    {
 		// 1. Acquire current message for the first node in keys
-		val firstNode = keys[0]
-		val firstMsg = naaradGetSingleDataForNode(firstNode, activeSocket!!)
+		// val firstNode = keys[0]
+		// val firstMsg = naaradGetSingleDataForNode(firstNode, activeSocket!!)
+
+		//
+		// Fallback to emptyList() keeps the type as List<String>
+		//
+		// Thought (SB's):
+		//   The following code achieves what would be
+		//   achieved in other languages with checks if
+		//   various variables (activeSocket, return value of
+		//   naaradGetDataONlyEngine(), etc.) is null or
+		//   blank.  The code below does not look more
+		//   readable, or any shorter either!  What's the
+		//   point then?
+		val messages = activeSocket?.let { socket ->
+		    naaradGetCurrentDataEngine(keys, socket, publish=false)
+		} ?: emptyList()
+
+		// for (m in messages) Log.d("syncData", m)
+
+		val firstMsg = messages.getOrNull(0) ?: ""
 		// if (isMessageValid(firstMsg) throw(Exception("syncData: First message is not valid: "+message));
 
 		if (firstMsg.contains("{"))
 		{
 		    // 2. Compute latestTimeMs for the first node
 		    val latestTimeMs = parseTimestampFromMessage(firstMsg)
+		    val firstNode=keys[0]
 
 		    // 3. Get lastPlotTimeMs for the first node
 		    val map = NaaradUtils.nodeID2NdxMap
 		    val seriesIndex = map[firstNode] ?: 0
+
 		    val dataSet = mLineChart?.data?.getDataSetByIndex(seriesIndex) as? LineDataSet
 
 		    val lastPlotTimeMs =
@@ -608,30 +635,40 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
 			else 0L;
 
 		    val timeDiffMs = latestTimeMs - lastPlotTimeMs
+		    //Log.d("syncData", "times: "+(latestTimeMs/1000.0).toString()+ " " + (lastPlotTimeMs/1000.0).toString())
+
 		    // Log.d("syncData",
 		    // 	  " Gap of ${timeDiffMs / 60000}m for node $firstNode, SyncTimescale: ${NaaradUtils.livePlotReSyncTimescale * 1000L/60000}m.")
+
 		    // 4. Check if time difference > NaaradUtils.livePlotReSyncTimescale in sec converted to Ms
 		    if (lastPlotTimeMs > 0 && timeDiffMs > NaaradUtils.livePlotReSyncTimescale * 1000L)
 		    {
 			Log.d("syncData", "Gap of ${timeDiffMs / 60000}m > ${NaaradUtils.livePlotReSyncTimescale * 1000L/60000}m for node $firstNode. Fetching history...")
-			// Fetch historical data for all nodes in keys
+
+			// Clear existing dataset before refilling historical stream
+			activity?.runOnUiThread {
+			    val dataSet1 = mLineChart?.data?.getDataSetByIndex(0) as? LineDataSet
+			    val dataSet2 = mLineChart?.data?.getDataSetByIndex(1) as? LineDataSet
+			    dataSet1?.clear()
+			    dataSet2?.clear()
+			    mLineChart?.data?.notifyDataChanged()
+			    mLineChart?.notifyDataSetChanged()
+			}
+
+			// Fetch and re-plot historical data for all
+			// nodes in keys
 			naaradGetData(keys, getHistory = true)
 		    }
 		    else
 		    {
-			// Publish message for the first node
-			if (firstMsg != null && firstMsg.contains("{")) publishJSON(firstMsg);
-			//Log.d("syncData "+keys[0].toString(),firstMsg)
-
-			// Acquire and publish messages for the remaining nodes in keys
-			for (i in 1 until keys.size)
+			for (m in messages)
 			{
 			    if (allDone || isCancelled) break
-			    val restMsg = naaradGetSingleDataForNode(keys[i], activeSocket!!)
-			    if (restMsg.contains("{"))
+//			    val restMsg = naaradGetSingleDataForNode(keys[i], activeSocket!!)
+			    if (m.contains("{"))
 			    {
 				//Log.d("syncData "+keys[i].toString(),restMsg)
-				if (restMsg != null && restMsg.contains("{")) publishJSON(restMsg);
+				if (m != null) publishJSON(m)
 			    }
 			}
 		    }
@@ -677,9 +714,9 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
 		// Get historical data, or the latest data point
 		// depending on when the last plotted data was
 		// acquired.
-		//syncData(keys);
+		syncData(keys);
 
-		naaradGetData(keys, false) // Get the latest data point
+//		naaradGetData(keys, false) // Get the latest data point
             }
 
             return retStr
