@@ -296,7 +296,7 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
         chart.invalidate()
     }
 
-    fun addNewData(seriesIndex: Int, x: Double, y: Double) {
+    fun addNewData(seriesIndex: Int, x: Double, y: Double,force: Boolean=false) {
         val chart = mLineChart ?: return
         val data = chart.data ?: return
         val dataSet = data.getDataSetByIndex(seriesIndex) as? LineDataSet ?: return
@@ -306,7 +306,7 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
             val lastEntry = dataSet.getEntryForIndex(entryCount - 1)
             // If the sensor value did not change don't make a new entry
             //if ((y.toFloat() == lastEntry.y) && ((x.toFloat() - lastEntry.y)/1000F < NaaradUtils.NEW_PLOT_DATA_TIMESCALE))
-            if ((y.toFloat() == lastEntry.y))
+            if ((y.toFloat() == lastEntry.y) && !force)
                 return
         }
 
@@ -417,7 +417,7 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
         //     }
         // }
 
-        private fun publishJSON(message: String) {
+        private fun publishJSON(message: String, force :Boolean=false) {
             val jsonStart = message.indexOf('{')
             val jsonEnd = message.lastIndexOf('}')
             if (jsonStart < 0 || jsonEnd <= jsonStart) {
@@ -450,7 +450,7 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
                 val curY = displayY
 
                 activity?.runOnUiThread {
-                    addNewData(seriesIndex, curX, curY)
+                    addNewData(seriesIndex, curX, curY,force)
                     reDrawThrottled()
                     mMainActivityCallback?.onDataArrival(jsonStr)
                 }
@@ -708,12 +708,15 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
 		    // 	  " Gap of ${timeDiffMs / 60000}m for node $firstNode, SyncTimescale: ${NaaradUtils.livePlotReSyncTimescale * 1000L/60000}m.")
 
 		    // 4. Check if time difference > NaaradUtils.livePlotReSyncTimescale in sec converted to Ms
+		    var gotHistory :Boolean=false
 		    if (lastPlotTimeMs > 0 && timeDiffMs > NaaradUtils.livePlotReSyncTimescale * 1000L)
 		    {
-			Log.d("syncData", "Gap of ${timeDiffMs / 60000}m > ${NaaradUtils.livePlotReSyncTimescale * 1000L/60000}m for node $firstNode. Fetching history...")
+			Log.d("syncData", "Gap of ${timeDiffMs / 60000}m >"
+			      +" ${NaaradUtils.livePlotReSyncTimescale * 1000L/60000}m"
+			      +" for node $firstNode. Fetching history...")
 
 			// Clear existing dataset before refilling historical stream
-			activity?.runOnUiThread {
+			activity?.runOnUiThread	{
 			    val dataSet1 = mLineChart?.data?.getDataSetByIndex(0) as? LineDataSet
 			    val dataSet2 = mLineChart?.data?.getDataSetByIndex(1) as? LineDataSet
 			    dataSet1?.clear()
@@ -725,18 +728,20 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
 			// Fetch and re-plot historical data for all
 			// nodes in keys
 			naaradGetData(keys, getHistory = true)
+			gotHistory=true
 		    }
-		    else
+
+		    // Always publish the current messages.  Forcing
+		    // them to be published even if the sensor values
+		    // did not change if data streams in the app were
+		    // updated (gotHistory == true).
+		    for (m in messages)
 		    {
-			for (m in messages)
+			if (allDone || isCancelled) break
+			if (m.contains("{"))
 			{
-			    if (allDone || isCancelled) break
-//			    val restMsg = naaradGetSingleDataForNode(keys[i], activeSocket!!)
-			    if (m.contains("{"))
-			    {
-				//Log.d("syncData "+keys[i].toString(),restMsg)
-				if (m != null) publishJSON(m)
-			    }
+			    //Log.d("syncData ", m+" "+gotHistory.toString())
+			    if (m != null) publishJSON(m,force=gotHistory)
 			}
 		    }
 		}
@@ -767,12 +772,19 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
 	    // changed, it saved vis setPreferences() and re-cached
 	    // for efficient access at run time.
 	    while (!allDone) {
+		// This always gets the latest value of Ping timeout.
+		// Internally, this variable is updated from Settings
+		// tab if the user changes the value.  Accessing
+		// livePingTimeout in a tight loop is no different
+		// from using a variable.
                 val pingTO: Long = ((NaaradUtils.livePingTimeout) * 1000).roundToLong()
 		//Log.d("doInBG","pingTO = "+pingTO.toString())
 
 		// An interruptible sleep, which is interrupted if
 		// NaaradUtils.currentPingTimeout is updated
-		// (currently from the NaaradSettingFragment.kt)
+		// (currently from the
+		// NaaradSettingFragment.kt). NaaradUtils.currentPingTimeout
+		// is cached in NaaradUtils.livePingTimeout variable.
                 sleeper.sleep(pingTO)
                 sleeper.reset()
 

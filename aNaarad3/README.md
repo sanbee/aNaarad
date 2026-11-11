@@ -15,7 +15,7 @@ The app communicates directly over local TCP sockets with a home telemetry serve
 | Controls Tab | Sensors Tab | Settings Tab |
 | :---: | :---: | :---: |
 | ![Controls Tab](docs/screenshots/tab_controls.png) | ![Sensors Tab](docs/screenshots/tab_sensors.png) | ![Settings Tab](docs/screenshots/tab_settings.png) |
-| **Interactive Floorplan & Switches** | **Real-Time & Historical Plotting** | **Network & Polling Configuration** |
+| **🎛️ Interactive Floorplan & Switches** | **📈 Real-Time & Historical Plotting** | **⚙️ Network & Polling Configuration** |
 
 ### 1. 🎛️ Controls Tab
 - **Interactive Floorplan Overlay**: Drag-and-Drop lightbulb icons and number badges together to match your physical home layout. Position coordinates persist across app restarts.
@@ -39,7 +39,7 @@ The app communicates directly over local TCP sockets with a home telemetry serve
 
 - **Language**: 100% Kotlin (targeting Java 11 JVM Bytecode)
 - **Target SDK**: Android 15 (API 35) \| **Min SDK**: Android 8.0 (API 26)
-- **UI Architecture**: `TabLayout` + `ViewPager2` + `TabLayoutMediator`
+- **UI Architecture**: `TabLayout` + `ViewPager2` + `TabLayoutMediator` with custom `TextView` tab views and adaptive alpha selection
 - **Plotting Library**: `MPAndroidChart v3.1.0` with custom vertical Y-axis rendering
 - **Concurrency & Sockets**: Custom non-blocking `iSleep` thread synchronization (`CountDownLatch`) and non-blocking TCP socket readers
 
