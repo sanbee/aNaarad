@@ -18,12 +18,17 @@
 package naarad.client.tabhost
 
 import android.graphics.Color
+import android.graphics.Typeface
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.text.Spannable
 import android.text.SpannableString
 import android.text.style.ForegroundColorSpan
+import android.text.style.RelativeSizeSpan
+import android.text.style.StyleSpan
+import android.view.Gravity
+import android.view.View
 import android.widget.TextView
 import androidx.fragment.app.FragmentActivity
 import androidx.viewpager2.widget.ViewPager2
@@ -40,6 +45,19 @@ class MainActivity : FragmentActivity(), NaaradPlotFragment.nPlotDataArrivalList
     private var gUIHandler: Handler? = null
     private var gRunnableBlinker: mRunnable? = null
 
+    private fun formatTabTitle(icon: String, title: String, textColor: Int? = null): CharSequence {
+        val fullText = "$icon\n$title"
+        val spannable = SpannableString(fullText)
+        val titleStart = icon.length + 1
+        val titleEnd = fullText.length
+        spannable.setSpan(RelativeSizeSpan(0.75f), titleStart, titleEnd, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+        spannable.setSpan(StyleSpan(Typeface.BOLD), titleStart, titleEnd, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+        if (textColor != null) {
+            spannable.setSpan(ForegroundColorSpan(textColor), 0, fullText.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+        return spannable
+    }
+
     internal inner class mRunnable : Runnable {
         var theText: String? = null
         var theColor: Int = 0
@@ -52,12 +70,11 @@ class MainActivity : FragmentActivity(), NaaradPlotFragment.nPlotDataArrivalList
         override fun run() {
             val tab = mTabLayout?.getTabAt(1) ?: return
             val label = theText ?: "Sensors"
-            if (theColor == Color.GREEN) {
-                val spannable = SpannableString(label)
-                spannable.setSpan(ForegroundColorSpan(Color.GREEN), 0, spannable.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-                tab.text = spannable
+            val customTv = tab.customView as? TextView
+            if (customTv != null) {
+                customTv.text = if (theColor == Color.GREEN) formatTabTitle("📈", label, Color.GREEN) else formatTabTitle("📈", label, null)
             } else {
-                tab.text = label.trim()
+                tab.text = if (theColor == Color.GREEN) formatTabTitle("📈", label, Color.GREEN) else formatTabTitle("📈", label, null)
             }
         }
     }
@@ -118,13 +135,33 @@ class MainActivity : FragmentActivity(), NaaradPlotFragment.nPlotDataArrivalList
         }
 
         TabLayoutMediator(mTabLayout!!, mViewPager!!) { tab, position ->
-            tab.text = when (position) {
-                0 -> "Controls"
-                1 -> "Sensors"
-                2 -> "Settings"
-                else -> ""
+            val (icon, title) = when (position) {
+                0 -> "🎛️" to "Controls"
+                1 -> "📈" to "Sensors"
+                2 -> "⚙️" to "Settings"
+                else -> "" to ""
             }
+            val tabTextView = TextView(this).apply {
+                text = formatTabTitle(icon, title)
+                gravity = Gravity.CENTER
+                textAlignment = View.TEXT_ALIGNMENT_CENTER
+                setLineSpacing(0f, 1.0f)
+                alpha = if (position == (mViewPager?.currentItem ?: 0)) 1.0f else 0.5f
+            }
+            tab.customView = tabTextView
         }.attach()
+
+        mTabLayout!!.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
+            override fun onTabSelected(tab: TabLayout.Tab) {
+                tab.customView?.alpha = 1.0f
+            }
+
+            override fun onTabUnselected(tab: TabLayout.Tab) {
+                tab.customView?.alpha = 0.5f
+            }
+
+            override fun onTabReselected(tab: TabLayout.Tab) {}
+        })
 
         gUIHandler = Handler(Looper.getMainLooper())
         gRunnableBlinker = mRunnable()

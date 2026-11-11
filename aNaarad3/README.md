@@ -24,7 +24,7 @@ The app communicates directly over local TCP sockets with a home telemetry serve
 
 ### 2. 📈 Sensors Tab
 - **High-Performance Plotting**: Time-series telemetry plotting powered by **MPAndroidChart**.
-- **Historical Data Resync**: Automatically detects data gaps greater than the configured resync timescale and backfills missing historical streams (`gethpkt`) seamlessly.
+- **Historical Data Resync**: Automatically detects data gaps greater than the configured resync timescale and backfills missing historical streams seamlessly.
 - **Rolling Window**: Automatically prunes entries older than the configured plot timerange to optimize RAM usage while maintaining a rolling history window.
 - **Interactive Y-Axis Unit Switching**: Single-tap the vertical Y-axis label button (**"Temperature (C)"** / **"Temperature (F)"**) to dynamically convert on-screen plot values between °C and °F.
 
