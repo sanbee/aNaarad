@@ -21,8 +21,10 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.RectF
 import android.util.AttributeSet
 import android.util.TypedValue
+import android.view.MotionEvent
 import android.os.AsyncTask
 import android.os.Build
 import android.os.Bundle
@@ -59,11 +61,46 @@ class VerticalTitleLineChart @JvmOverloads constructor(
     defStyle: Int = 0
 ) : LineChart(context, attrs, defStyle) {
     var yAxisTitle: String = "Temperature (C)"
-    var yAxisTitleColor: Int = Color.WHITE
+    var yAxisTitleColor: Int = Color.BLACK
     var yAxisTitleSize: Float = 10f
+    var onTitleClickListener: (() -> Unit)? = null
 
     private val titlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         textAlign = Paint.Align.CENTER
+        isFakeBoldText = true
+    }
+
+    private val buttonBgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.rgb(214, 215, 215)
+        style = Paint.Style.FILL
+    }
+
+    private val buttonRect = RectF()
+
+    private var touchStartX = 0f
+    private var touchStartY = 0f
+
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        val labelWidthPx = TypedValue.applyDimension(
+            TypedValue.COMPLEX_UNIT_DIP,
+            40f,
+            resources.displayMetrics
+        )
+        when (event.action) {
+            MotionEvent.ACTION_DOWN -> {
+                touchStartX = event.x
+                touchStartY = event.y
+            }
+            MotionEvent.ACTION_UP -> {
+                val dx = Math.abs(event.x - touchStartX)
+                val dy = Math.abs(event.y - touchStartY)
+                if (touchStartX <= labelWidthPx && dx < 15f && dy < 15f) {
+                    onTitleClickListener?.invoke()
+                    return true
+                }
+            }
+        }
+        return super.onTouchEvent(event)
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -79,11 +116,25 @@ class VerticalTitleLineChart @JvmOverloads constructor(
             canvas.save()
             val x = TypedValue.applyDimension(
                 TypedValue.COMPLEX_UNIT_DIP,
-                10f,
+                12f,
                 resources.displayMetrics
             )
             val y = height / 2f
             canvas.rotate(-90f, x, y)
+
+            // Draw button frame matching top-right unitButton style
+            val textWidth = titlePaint.measureText(yAxisTitle)
+            val padX = 10f
+            val padY = 5f
+            buttonRect.set(
+                x - textWidth / 2f - padX,
+                y - titlePaint.textSize + padY - 5f,
+                x + textWidth / 2f + padX,
+                y + padY
+            )
+
+            canvas.drawRoundRect(buttonRect, 4f, 4f, buttonBgPaint)
+
             canvas.drawText(yAxisTitle, x, y, titlePaint)
             canvas.restore()
         }
@@ -134,15 +185,14 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
         }
 
         mLineChart = mView!!.findViewById(R.id.lineChart)
-        mLineChart?.let { initChart(it) }
-
-        val unitBtn = mView!!.findViewById<ToggleButton>(R.id.unitButton)
-        val initialUnit = getPreference("plotUnit", "C") ?: "C"
-        unitBtn?.isChecked = (initialUnit == "F")
-        unitBtn?.setOnCheckedChangeListener { _, isChecked ->
-            val newUnit = if (isChecked) "F" else "C"
-            setPreference("plotUnit", newUnit)
-            switchPlotUnit(newUnit)
+        (mLineChart as? VerticalTitleLineChart)?.let { chart ->
+            initChart(chart)
+            chart.onTitleClickListener = {
+                val currentUnit = getPreference("plotUnit", "C") ?: "C"
+                val newUnit = if (currentUnit == "C") "F" else "C"
+                setPreference("plotUnit", newUnit)
+                switchPlotUnit(newUnit)
+            }
         }
 
         nConnected = true

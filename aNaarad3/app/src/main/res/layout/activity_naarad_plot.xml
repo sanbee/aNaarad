@@ -5,23 +5,6 @@
 		tools:context="naarad.client.tabhost.MainActivity"
 		android:id="@+id/plotRL" >
 
-    <ToggleButton
-       android:id="@+id/unitButton"
-       android:layout_width="wrap_content"
-       android:layout_height="wrap_content"
-       android:layout_alignParentTop="true"
-       android:layout_alignParentRight="true"
-       android:layout_margin="4dp"
-       android:textStyle="bold"
-       android:textSize="10sp"
-       android:minHeight="0dp"
-       android:minWidth="0dp"
-       android:alpha="0.5"
-       android:textOn="°F"
-       android:textOff="°C"
-       android:text="°C"
-       />
-
     <naarad.client.tabhost.VerticalTitleLineChart
        android:id="@+id/lineChart"
        android:layout_width="match_parent"

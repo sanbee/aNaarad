@@ -18,19 +18,19 @@ The app communicates directly over local TCP sockets with a home telemetry serve
 | **Interactive Floorplan & Switches** | **Real-Time & Historical Plotting** | **Network & Polling Configuration** |
 
 ### 1. 🎛️ Controls Tab
-- **Interactive Floorplan Overlay**: Drag-and-Drop lightbulb icons and sensor nodes to match your physical home layout. Position coordinates persist across app restarts.
+- **Interactive Floorplan Overlay**: Drag-and-Drop lightbulb icons and number badges together to match your physical home layout. Position coordinates persist across app restarts.
 - **Device Toggles**: Single-tap lightbulb icons or right-hand toggle buttons to control lighting circuits remotely.
 - **Live Sensor Speak-Bubbles**: Real-time temperature speech bubbles positioned over room locations. Single-tap any speak-bubble to toggle displayed units between **°C** and **°F** with persistent preference saving.
 
 ### 2. 📈 Sensors Tab
 - **High-Performance Plotting**: Time-series telemetry plotting powered by **MPAndroidChart**.
-- **Historical Data Resync**: Automatically detects data gaps greater than 30 minutes and backfills missing historical streams seamlessly.
-- **Rolling Window**: Automatically prunes entries older than a settable length of time to optimize RAM usage while maintaining a rolling history window.
-- **Interactive Unit Switching**: Dedicated **°C / °F** toggle button that dynamically converts on-screen plot values and updates vertical Y-axis labels.
+- **Historical Data Resync**: Automatically detects data gaps greater than the configured resync timescale and backfills missing historical streams (`gethpkt`) seamlessly.
+- **Rolling Window**: Automatically prunes entries older than the configured plot timerange to optimize RAM usage while maintaining a rolling history window.
+- **Interactive Y-Axis Unit Switching**: Single-tap the vertical Y-axis label button (**"Temperature (C)"** / **"Temperature (F)"**) to dynamically convert on-screen plot values between °C and °F.
 
 ### 3. ⚙️ Settings Tab
 - **Server Connection**: Configure target server IP address and TCP port.
-- **Flexible Time Inputs**: Configure `Ping Timeout`, `Plot Timerange`, and `ReSync Timescale` using DHMS format inputs (e.g. `2d`, `1m`, `30s`, `1h30m`).
+- **Flexible Time Inputs**: Configure `Ping Timeout`, `Plot Timerange`, and `ReSync Timescale` using DHMS format inputs (e.g. `2d`, `1h30m20s`, `10m`, `45s`, `120`). Settings are applied live and saved persistently across app restarts.
 - **Power & Network Controls**: Toggle CPU wake locks and Wi-Fi locks to ensure continuous background polling.
 
 ---
