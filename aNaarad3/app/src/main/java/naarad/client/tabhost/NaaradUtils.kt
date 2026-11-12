@@ -379,11 +379,39 @@ object NaaradUtils {
     //
     //---------------------------------------------------------------------------------------------
     //
-    @Throws(IOException::class, UnknownHostException::class)
-    fun naaradWriter(socWriter: PrintWriter, message: String) {
-        socWriter.write(mkMessage(message))
-        socWriter.flush()
+    // @Throws(IOException::class, UnknownHostException::class)
+    // fun naaradWriter(socWriter: PrintWriter, message: String) {
+    //     socWriter.write(mkMessage(message))
+    //     socWriter.flush()
+    // }
+
+    @Throws(IOException::class)
+    fun naaradWriter(socWriter: PrintWriter?, message: String?) {
+        if (socWriter == null) {
+            throw IOException("Cannot write message: PrintWriter is null")
+        }
+        if (message.isNullOrEmpty()) {
+            return
+        }
+
+        try {
+            val formattedMsg = mkMessage(message)
+            socWriter.write(formattedMsg)
+            socWriter.flush()
+
+            // PrintWriter suppresses IOExceptions internally; checkError() checks if write/flush failed
+            if (socWriter.checkError()) {
+                throw IOException("I/O error detected in PrintWriter while sending message: '$message'")
+            }
+        } catch (e: Exception) {
+	    val errMsg="Failed to send message '$message': ${e.message}"
+	    uiToast(errMsg,Gravity.BOTTOM)
+            if (e is IOException) throw e
+            throw IOException(errMsg, e)
+        }
     }
+
+
     //
     //---------------------------------------------------------------------------------------------
     //
