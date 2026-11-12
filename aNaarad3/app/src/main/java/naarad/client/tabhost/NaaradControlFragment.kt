@@ -47,7 +47,10 @@ import java.io.IOException
 import java.io.PrintWriter
 import java.net.Socket
 import java.net.UnknownHostException
-import android.os.AsyncTask
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 //public class NaaradControlFragment extends Fragment implements View.OnLongClickListener 
 class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListener
@@ -237,8 +240,7 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
 
 
         //	Log.i("Cmd: ",messsage);
-        val sendMessageTask = SendMessage()
-        sendMessageTask.execute()
+        sendMessageAsync(messsage!!)
     }
 
     //
@@ -737,26 +739,19 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
     //
     //-----------------------------------------------------------------------------------------
     //
-    private inner class SendMessage : AsyncTask<Void?, Void?, String?>() {
-        //
-        //-----------------------------------------------------------------------------------------
-        //
-        override fun doInBackground(vararg params: Void?): String? {
-            //Log.i("Thread: ",messsage);
-            return sendCommand(messsage!!)
-        }
+    private fun sendMessageAsync(cmd: String) {
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+            val result = sendCommand(cmd)
+            if (result != ALL_WELL) {
+                withContext(Dispatchers.Main) {
+                    toast(result, Gravity.TOP or Gravity.RIGHT)
+                    currentToggleButton?.let { btn ->
+                        val on = btn.isChecked
+                        val tag = (btn.tag as String?)!!.toInt()
 
-        override fun onPostExecute(result: String?) {
-            super.onPostExecute(result)
-            if (result !== ALL_WELL) {
-                //Toast.makeText(mActivity0, result, Toast.LENGTH_SHORT).show();
-                toast(result, Gravity.TOP or Gravity.RIGHT)
-                currentToggleButton?.let { btn ->
-                    val on = btn.isChecked
-                    val tag = (btn.tag as String?)!!.toInt()
-
-                    btn.isChecked = !on
-                    setBulbBG(bulbArr[tag]!!, on)
+                        btn.isChecked = !on
+                        setBulbBG(bulbArr[tag]!!, on)
+                    }
                 }
             }
         }

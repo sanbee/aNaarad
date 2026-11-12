@@ -25,10 +25,13 @@ import android.graphics.RectF
 import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.MotionEvent
-import android.os.AsyncTask
 import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import android.util.Log
 import android.view.Gravity
 import android.view.LayoutInflater
@@ -365,9 +368,7 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
         if ((n == 0) || (n == -1)) {
             if (mSensorDataSource == null || mSensorDataSource?.isRunning == false) {
                 mSensorDataSource = SensorDataSource()
-
-                if (apiLevel <= 9) mSensorDataSource?.execute()
-                else mSensorDataSource?.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR)
+                mSensorDataSource?.execute()
             }
         }
     }
@@ -376,12 +377,17 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
         mSensorDataSource?.cancel(true)
     }
 
-    protected inner class SensorDataSource :
-        AsyncTask<Void?, Void?, String?>() {
+    protected inner class SensorDataSource {
         protected var nodeid: Int = 0
-        @Volatile private var allDone = false
+        @Volatile var allDone = false
+        private var sensorJob: Job? = null
+
         val isRunning: Boolean
-            get() = !allDone && status != Status.FINISHED
+            get() = !allDone && sensorJob?.isActive == true
+
+        val isCancelled: Boolean
+            get() = allDone || sensorJob?.isCancelled == true
+
         private var doReDraw = true
         protected var x0: Double = 0.0
         protected var y0: Double = 0.0
@@ -397,9 +403,25 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
         fun finish() {
             allDone = true
             sleeper.abort()
+            sensorJob?.cancel()
             try {
                 activeSocket?.close()
             } catch (ignored: Exception) {}
+        }
+
+        fun cancel(mayInterruptIfRunning: Boolean) {
+            finish()
+        }
+
+        fun execute() {
+            sensorJob?.cancel()
+            sensorJob = viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+                doInBackground()
+            }
+        }
+
+        fun executeOnExecutor(executor: Any?) {
+            execute()
         }
 
         // private fun openSocket(host: String, port: Int): Socket? {
@@ -758,7 +780,7 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
 	    // }
 	}
 
-        override fun doInBackground(vararg params: Void?): String? {
+        fun doInBackground(): String? {
             val retStr = "AllOK"
             allDone = false
             nConnected = true
@@ -823,9 +845,8 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
             }
         }
 
-        override fun onCancelled() {
+        fun onCancelled() {
             finish()
-            super.onCancelled()
         }
     }
 
