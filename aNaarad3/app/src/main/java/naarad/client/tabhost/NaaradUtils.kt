@@ -387,17 +387,44 @@ object NaaradUtils {
     //
     //---------------------------------------------------------------------------------------------
     //
-    fun naaradSocket(hostName: String?, port: Int): Socket? {
-        if (hostName.isNullOrEmpty() || port <= 0) return null
-        return try {
+    // fun naaradSocket(hostName: String?, port: Int): Socket? {
+    //     if (hostName.isNullOrEmpty() || port <= 0) return null
+    //     return try {
+    //         val clientSoc = Socket()
+    //         clientSoc.soTimeout = 10000 //Time out receiving
+    //         clientSoc.connect(java.net.InetSocketAddress(hostName, port), 20000) // TimeOut for connection
+    //         if (clientSoc.isConnected) clientSoc else null
+    //     } catch (e: Exception) {
+    //         return null
+    //     }
+    // }
+
+    @Throws(IOException::class)
+    fun naaradSocket(hostName: String?, port: Int): Socket {
+        if (hostName.isNullOrEmpty() || port <= 0) {
+            throw IOException()
+        }
+
+        try {
             val clientSoc = Socket()
-            clientSoc.soTimeout = 10000 //Time out receiving
-            clientSoc.connect(java.net.InetSocketAddress(hostName, port), 20000) // TimeOut for connection
-            if (clientSoc.isConnected) clientSoc else null
+            clientSoc.soTimeout = 10000 // Timeout receiving
+            clientSoc.connect(java.net.InetSocketAddress(hostName, port), 20000) // Timeout for connection
+
+            if (clientSoc.isConnected) {
+                return clientSoc
+            } else {
+                try { clientSoc.close() } catch (ignored: Exception) {}
+                throw IOException("Failed to connect socket to $hostName:$port")
+            }
         } catch (e: Exception) {
-            null
+            // Rethrow exception or wrap with detailed host/port message
+	    val errMsg="Error establishing socket connection to $hostName:$port - ${e.message}"
+	    uiToast(errMsg,Gravity.BOTTOM)
+            throw IOException(errMsg, e)
         }
     }
+
+
     //
     //---------------------------------------------------------------------------------------------
     //

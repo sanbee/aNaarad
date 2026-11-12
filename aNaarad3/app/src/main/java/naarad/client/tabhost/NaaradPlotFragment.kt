@@ -681,7 +681,7 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
 
 		// for (m in messages) Log.d("syncData", m)
 
-		val firstMsg = messages.getOrNull(0) ?: ""
+		val firstMsg = messages?.getOrNull(0) ?: ""
 		// if (isMessageValid(firstMsg) throw(Exception("syncData: First message is not valid: "+message));
 
 		if (firstMsg.contains("{"))
