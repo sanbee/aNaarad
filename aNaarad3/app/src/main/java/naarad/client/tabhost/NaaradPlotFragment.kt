@@ -741,7 +741,7 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
 		    if (lastPlotTimeMs > 0 && timeDiffMs > NaaradUtils.livePlotReSyncTimescale * 1000L)
 		    {
 			Log.d("syncData", "Gap of ${"%.2f".format(timeDiffMs / 60000F)}m >"
-			      +" ${"%2.f".format(NaaradUtils.livePlotReSyncTimescale * 1000L/60000F)}m"
+			      +" ${"%.2f".format(NaaradUtils.livePlotReSyncTimescale * 1000L/60000F)}m"
 			      +" for node $firstNode. Fetching history...")
 
 			// Clear existing dataset before refilling historical stream
@@ -777,7 +777,7 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
 	    }
 	    catch (e: Exception)
 	    {
-		Log.d("syncData", "Error in syncData: " + e.message)
+		Log.d("syncData", "Error in syncData: ${e.javaClass.simpleName}:" + e.message)
 	    }
 	    // finally {
 	    //     try {

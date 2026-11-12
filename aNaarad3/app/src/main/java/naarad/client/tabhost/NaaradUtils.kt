@@ -16,12 +16,11 @@
  */
 
 package naarad.client.tabhost
-
 import android.util.Log
 import android.content.Context
 import android.content.SharedPreferences
 import android.net.ConnectivityManager
-import android.net.NetworkInfo
+import android.net.NetworkCapabilities
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
@@ -262,9 +261,18 @@ object NaaradUtils {
     val isWifiConnected: Boolean
         get() {
             val ctx = NaaradAbstractFragment.mActivity ?: return false
-            val connManager = ctx.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
-            val mWifi: NetworkInfo? = connManager?.getNetworkInfo(ConnectivityManager.TYPE_WIFI)
-            return mWifi?.isConnected == true
+            val connManager = ctx.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return false
+
+            return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val activeNetwork = connManager.activeNetwork ?: return false
+                val capabilities = connManager.getNetworkCapabilities(activeNetwork) ?: return false
+                capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+            } else {
+                @Suppress("DEPRECATION")
+                val mWifi = connManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI)
+                @Suppress("DEPRECATION")
+                mWifi?.isConnected == true
+            }
         }
     //
     //---------------------------------------------------------------------------------------------
@@ -457,13 +465,7 @@ object NaaradUtils {
     //---------------------------------------------------------------------------------------------
     //
     fun isCleartextPermittedForHost(host: String): Boolean {
-	return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            // Checks the exact host against your NetworkSecurityConfig XML rules
-            NetworkSecurityPolicy.getInstance().isCleartextTrafficPermitted(host)
-	} else {
-            // On API 23, it's a global true/false setting
-            NetworkSecurityPolicy.getInstance().isCleartextTrafficPermitted
-	}
+        return NetworkSecurityPolicy.getInstance().isCleartextTrafficPermitted(host)
     }
 
 }
