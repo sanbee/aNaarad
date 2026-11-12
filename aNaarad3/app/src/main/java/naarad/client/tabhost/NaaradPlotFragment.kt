@@ -171,24 +171,27 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
         @Suppress("DEPRECATION")
         setRetainInstance(true)
 
-        val currentActivity = activity
-        if (currentActivity != null) {
-            myApp = currentActivity.application as NaaradApp
+        activity?.let { act ->
+            myApp = act.application as? NaaradApp
         }
 
-        if (!recreateView(mView))
-            mView = inflater.inflate(R.layout.activity_naarad_plot, container, false)
+        val rootView = if (!recreateView(mView)) {
+            inflater.inflate(R.layout.activity_naarad_plot, container, false).also { mView = it }
+        } else {
+            mView ?: inflater.inflate(R.layout.activity_naarad_plot, container, false).also { mView = it }
+        }
 
         try {
-            mMainActivityCallback = activity as nPlotDataArrivalListener
+            mMainActivityCallback = activity as? nPlotDataArrivalListener
         } catch (e: ClassCastException) {
             throw ClassCastException(
-                activity.toString() + " must implement mMainActivityCallback"
+                "${activity} must implement mMainActivityCallback"
             )
         }
 
-        mLineChart = mView!!.findViewById(R.id.lineChart)
-        (mLineChart as? VerticalTitleLineChart)?.let { chart ->
+        val lineChart = rootView.findViewById<LineChart>(R.id.lineChart)
+        mLineChart = lineChart
+        (lineChart as? VerticalTitleLineChart)?.let { chart ->
             initChart(chart)
             chart.onTitleClickListener = {
                 val currentUnit = getPreference("plotUnit", "C") ?: "C"
@@ -201,7 +204,7 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
         nConnected = true
         startAllCharts(-1)
 
-        return mView!!
+        return rootView
     }
 
     fun switchPlotUnit(unit: String) {
@@ -340,7 +343,7 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
     }
 
     fun stopDataSource() {
-        if (mSensorDataSource != null) mSensorDataSource!!.finish()
+        mSensorDataSource?.finish()
     }
 
     override fun onDestroy() {
@@ -358,9 +361,11 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
     override fun onPause() {
         Log.d("NPF::onPause","NPF paused")
         super.onPause()
-        if (myApp?.myWakeLock?.isHeld == true) {
-            myApp!!.myWakeLock!!.release()
-            Log.d("NPF::onPause","Releasing wake lock")
+        myApp?.myWakeLock?.let { wakeLock ->
+            if (wakeLock.isHeld) {
+                wakeLock.release()
+                Log.d("NPF::onPause", "Releasing wake lock")
+            }
         }
     }
 
@@ -527,32 +532,6 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
             // mySoc.close()
         }
 
-	// !!!
-	// !!! CAN BE DEPRECATED AFTER ITS USE IS REPLACED WITH naaradGetCurrentDataEngine()
-	// !!!
-	inline private fun naaradGetSingleDataForNode(
-	    key: Int,
-	    mySoc: Socket) : String
-	{
-            val mySocWriter = PrintWriter(mySoc.getOutputStream(), true)
-            val mySocReader = BufferedReader(InputStreamReader(mySoc.getInputStream()), 1000)
-            naaradWriter(mySocWriter, "NaaradDataSync_N")
-
-            if (allDone || isCancelled) return ""
-            val msg = "getcpkt " + key
-            naaradWriter(mySocWriter, msg)
-            SystemClock.sleep(100)
-
-            val message = NaaradUtils.naaradReader(mySocReader,"getcpkt") ?: ""
-	    return message;
-	}
-
-	//
-	// Get the current (latest) data packet for each node in the keys.
-	// Valid messages are also published.
-	//
-	// The messages received are returned as an array of messages.
-	//
 	private fun naaradGetCurrentDataEngine(
 	    keys: IntArray,
 	    mySoc: Socket,
@@ -576,7 +555,7 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
 		// If the message is valid, publish it and add the messages list.
 		if (message.isNotEmpty())
 		{
-		    if (message != null && message.contains("{") && publish) publishJSON(message);
+		    if (message.contains("{") && publish) publishJSON(message);
 		    messagesList.add(message)
 		}
 	    }
@@ -597,35 +576,63 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
 	    return messagesList
 	}
 
-        private fun naaradGetData(
-            keys: IntArray,
-            getHistory: Boolean
-        ) {
-            val host = NaaradUtils.serverName
-            val port = NaaradUtils.serverPort
-            //val mySoc = openSocket(host ?: "", port) ?: return
-            // val mySoc = naaradSocket(host, port) ?: return
-            if (activeSocket==null)
-		activeSocket = naaradSocket(host, port) ?: return
-            try {
-                if (getHistory) naaradGetDataHistoryEngine(keys, activeSocket!!)
-                else
-		{
-		    val messages=naaradGetCurrentDataEngine(keys, activeSocket!!)
-		    for (m in messages)
-		    {
+	private fun naaradGetData(
+	    keys: IntArray,
+	    getHistory: Boolean
+	) {
+	    val host = NaaradUtils.serverName
+	    val port = NaaradUtils.serverPort
+	    
+	    // Assign to a local non-null val, creating and storing a new socket only if activeSocket is null
+	    val socket = activeSocket ?: naaradSocket(host, port)?.also { activeSocket = it } ?: return
+
+	    try {
+		if (getHistory) {
+		    naaradGetDataHistoryEngine(keys, socket)
+		} else {
+		    val messages = naaradGetCurrentDataEngine(keys, socket)
+		    for (m in messages) {
 			Log.d("naaradGetDat", m)
 		    }
 		}
-            } catch (e: Exception) {
-                Log.d("naaradGetData", "Error: " + e.message)
-            } finally {
-                try {
-		    activeSocket?.close()
-                } catch (ignored: Exception) {}
-                activeSocket = null
+	    } catch (e: Exception) {
+		Log.d("naaradGetData", "Error: " + e.message)
+	    } finally {
+		try {
+		    socket.close()
+		} catch (ignored: Exception) {}
+		activeSocket = null
 	    }
-        }
+	}
+
+        // LEGECY CODE BELOW
+        // private fun naaradGetData(
+        //     keys: IntArray,
+        //     getHistory: Boolean
+        // ) {
+        //     val host = NaaradUtils.serverName
+        //     val port = NaaradUtils.serverPort
+        //     val socket = activeSocket ?: naaradSocket(host, port) ?: return
+        //     activeSocket = socket
+
+        //     try {
+        //         if (getHistory) {
+        //             naaradGetDataHistoryEngine(keys, socket)
+        //         } else {
+        //             val messages = naaradGetCurrentDataEngine(keys, socket)
+        //             for (m in messages) {
+        //                 Log.d("naaradGetDat", m)
+        //             }
+        //         }
+        //     } catch (e: Exception) {
+        //         Log.d("naaradGetData", "Error: " + e.message)
+        //     } finally {
+        //         try {
+        //             socket.close()
+        //         } catch (ignored: Exception) {}
+        //         activeSocket = null
+        //     }
+        // }
 
 	// inline private fun isMessageValid(message: String) : JSONObject
 	// {
@@ -733,8 +740,8 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
 		    var gotHistory :Boolean=false
 		    if (lastPlotTimeMs > 0 && timeDiffMs > NaaradUtils.livePlotReSyncTimescale * 1000L)
 		    {
-			Log.d("syncData", "Gap of ${timeDiffMs / 60000F}m >"
-			      +" ${NaaradUtils.livePlotReSyncTimescale * 1000L/60000F}m"
+			Log.d("syncData", "Gap of ${"%.2f".format(timeDiffMs / 60000F)}m >"
+			      +" ${"%2.f".format(NaaradUtils.livePlotReSyncTimescale * 1000L/60000F)}m"
 			      +" for node $firstNode. Fetching history...")
 
 			// Clear existing dataset before refilling historical stream
@@ -763,7 +770,7 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
 			if (m.contains("{"))
 			{
 			    //Log.d("syncData ", m+" "+gotHistory.toString())
-			    if (m != null) publishJSON(m,force=gotHistory)
+			    publishJSON(m,force=gotHistory)
 			}
 		    }
 		}
