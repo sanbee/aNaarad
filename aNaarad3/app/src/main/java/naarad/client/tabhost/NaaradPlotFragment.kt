@@ -711,8 +711,8 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
 		    var gotHistory :Boolean=false
 		    if (lastPlotTimeMs > 0 && timeDiffMs > NaaradUtils.livePlotReSyncTimescale * 1000L)
 		    {
-			Log.d("syncData", "Gap of ${timeDiffMs / 60000}m >"
-			      +" ${NaaradUtils.livePlotReSyncTimescale * 1000L/60000}m"
+			Log.d("syncData", "Gap of ${timeDiffMs / 60000F}m >"
+			      +" ${NaaradUtils.livePlotReSyncTimescale * 1000L/60000F}m"
 			      +" for node $firstNode. Fetching history...")
 
 			// Clear existing dataset before refilling historical stream
