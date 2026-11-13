@@ -40,6 +40,7 @@ import android.widget.ImageView
 import android.widget.RelativeLayout
 import android.widget.TextView
 import android.widget.ToggleButton
+import androidx.lifecycle.ViewModelProvider
 import org.json.JSONException
 import org.json.JSONObject
 import com.sanbee.anaarad.R
@@ -55,8 +56,11 @@ import kotlinx.coroutines.withContext
 //public class NaaradControlFragment extends Fragment implements View.OnLongClickListener 
 class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListener
 {
-    private var client: Socket? = null
-    private var printwriter: PrintWriter? = null
+    private val controlViewModel: ControlViewModel by lazy {
+        ViewModelProvider(this)[ControlViewModel::class.java]
+    }
+//    private var client: Socket? = null
+//    private var printwriter: PrintWriter? = null
     private var lamp0: ToggleButton? = null
     private var lamp1: ToggleButton? = null
     private var lamp2: ToggleButton? = null
@@ -109,8 +113,9 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
         val iY: Int
         val xsdp: Int
         val ysdp: Int
-        xsdp = (xSizeDP * myApp!!.densityDpi / 160.0).toInt()
-        ysdp = (ySizeDP * myApp!!.densityDpi / 160.0).toInt()
+        val densityDpi = myApp?.densityDpi ?: 160
+        xsdp = (xSizeDP * densityDpi.toDouble() / 160.0).toInt()
+        ysdp = (ySizeDP * densityDpi.toDouble() / 160.0).toInt()
 
         pX = event.x.toInt()
         pY = event.y.toInt()
@@ -142,6 +147,7 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
     //-----------------------------------------------------------------------------------------
     //
     fun setSensorValues(jsonStr: String): TextView? {
+        controlViewModel.lastJsonData = jsonStr
         try {
             val json = JSONObject(jsonStr)
             val temp = json.getDouble("degc").toFloat()
@@ -199,10 +205,10 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
     fun setBulbBG(v: View, on: Boolean) {
         val imageView = (v as? ImageView) ?: (v.getTag(R.integer.key0)?.toString()?.toIntOrNull()?.let { bulbArr.getOrNull(it) })
         imageView?.let { img ->
-            if (on) {
-                img.setImageDrawable(mActivity0!!.resources.getDrawable(R.drawable.lamp_off))
-            } else {
-                img.setImageDrawable(mActivity0!!.resources.getDrawable(R.drawable.lamp_on))
+            val res = mActivity0?.resources ?: activity?.resources
+            if (res != null) {
+                val drawable = if (on) res.getDrawable(R.drawable.lamp_off) else res.getDrawable(R.drawable.lamp_on)
+                img.setImageDrawable(drawable)
             }
             img.setBackgroundColor(Color.TRANSPARENT)
         }
@@ -227,20 +233,19 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
     //-----------------------------------------------------------------------------------------
     //
     fun lampHandler0(v: View) {
-        currentToggleButton = (v) as ToggleButton
+        currentToggleButton = v as? ToggleButton
 
-        //Log.i("Ctrl Server: ", serverName+":"+serverPort);
-        val tag = (v.tag as String?)!!.toInt()
+        val tag = (v.tag as? String)?.toIntOrNull() ?: 0
         val on = setLampBG(v)
-        setBulbBG(bulbArr[tag]!!, !on)
-        messsage = "tell " + v.tag + " "
+        bulbArr.getOrNull(tag)?.let { bulb ->
+            setBulbBG(bulb, !on)
+        }
+        val tagStr = v.tag?.toString() ?: ""
+        messsage = "tell $tagStr " + (if (on) "1" else "0")
 
-        if (on) messsage += "1"
-        else messsage += "0"
-
-
-        //	Log.i("Cmd: ",messsage);
-        sendMessageAsync(messsage!!)
+        messsage?.let { msg ->
+            sendMessageAsync(msg)
+        }
     }
 
     //
@@ -291,21 +296,22 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
             super.onLongPress(e)
             toast("DnD activated", Gravity.TOP or Gravity.RIGHT)
 
-            val selItem = gDnDParams!!.selected_item!!
-            gDnDParams!!.touchFlag_p = true
+            val params = gDnDParams ?: return
+            val selItem = params.selected_item ?: return
+            params.touchFlag_p = true
             selItem.background?.alpha = 80
 
             val lp = selItem.layoutParams as? MarginLayoutParams
-            gDnDParams!!.initial_left = if (lp != null && lp.leftMargin > 0) lp.leftMargin else selItem.left
-            gDnDParams!!.initial_top = if (lp != null && lp.topMargin > 0) lp.topMargin else selItem.top
-            gDnDParams!!.raw_touch_x0 = e.rawX
-            gDnDParams!!.raw_touch_y0 = e.rawY
+            params.initial_left = if (lp != null && lp.leftMargin > 0) lp.leftMargin else selItem.left
+            params.initial_top = if (lp != null && lp.topMargin > 0) lp.topMargin else selItem.top
+            params.raw_touch_x0 = e.rawX
+            params.raw_touch_y0 = e.rawY
 
             selItem.parent?.requestDisallowInterceptTouchEvent(true)
-            myApp!!.swipeState = false
+            myApp?.swipeState = false
 
-            gDnDParams!!.longPress_x = e.x.toInt()
-            gDnDParams!!.longPress_y = e.y.toInt()
+            params.longPress_x = e.x.toInt()
+            params.longPress_y = e.y.toInt()
             return
         }
     }
@@ -320,12 +326,13 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
             super.onSingleTapUp(e)
             val selItem = gDnDParams?.selected_item ?: return false
             val tag = (selItem.getTag(R.integer.key0) as? Int) ?: 0
-            if (tag >= 0 && tag < lampArr.size && lampArr[tag] != null) {
-                val on = lampArr[tag]!!.isChecked
-                val bulbView = bulbArr[tag] ?: selItem
+            val lampBtn = lampArr.getOrNull(tag)
+            if (lampBtn != null) {
+                val on = lampBtn.isChecked
+                val bulbView = bulbArr.getOrNull(tag) ?: selItem
                 setBulbBG(bulbView, on)
-                lampArr[tag]!!.isChecked = !on
-                lampHandler0(lampArr[tag]!!)
+                lampBtn.isChecked = !on
+                lampHandler0(lampBtn)
             }
             return false
         }
@@ -359,53 +366,22 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
     //
     //-----------------------------------------------------------------------------------------
     //
-    private fun makeHandlers(activity: Activity?) // View.OnClickListener lampHandler, 
-    // View.OnTouchListener onTouchListener, 
-    // GestureDetector gestureDetector)
-    {
-        // The following handles events on the toggle buttons
-        gLampHandler = object : View.OnClickListener {
-            override fun onClick(v: View) {
-                lampHandler0(v)
-            }
+    private fun makeHandlers(activity: Activity?) {
+        gLampHandler = View.OnClickListener { v ->
+            lampHandler0(v)
         }
 
+        val act = activity ?: mActivity0 ?: this.activity
+        val dnd = gDnDParams ?: NaaradDnDParameters().also { gDnDParams = it }
+        val app = myApp ?: (act?.application as? NaaradApp)
 
-        // The following two handlers handle gestures (SingleTap,
-        // LongPress) on lamp icons.
-        // gOnTouchListener = new View.OnTouchListener() 
-        //     {
-        //         public boolean onTouch(View v, MotionEvent event) 
-        //         {
-        // 	    return myOnTouchListener_p(v,event);
-        // 	}
-        //     };
+        if (act != null && app != null) {
+            val gd = GestureDetector(act, myGestureListener).also { gGestureDetector = it }
+            gOnTouchListener = NaaradDnDOnTouchListener(gd, dnd, app, 1.0f, 1.0f, 20, 20)
 
-        // Gesture detection for the lamp icons
-        gGestureDetector = GestureDetector(mActivity0, myGestureListener)
-        gOnTouchListener = NaaradDnDOnTouchListener(
-            gGestureDetector!!,
-            gDnDParams!!,
-            myApp!!,
-            1.0f,
-            1.0f,
-            20,
-            20
-        ) //Test code
-
-
-        // Gesture detection for the data-bubble icons.  Need for the
-        // height,width fudge factors (2.0, 1.5) should fixed.
-        gBubbleGestureListener = GestureDetector(mActivity0, bubbleGestureListener)
-        gBubbleOnTouchListener = NaaradDnDOnTouchListener(
-            gBubbleGestureListener!!,
-            gDnDParams!!,
-            myApp!!,
-            1.0f,
-            1.0f,
-            45,
-            25
-        ) //2.3F,1.5F); //Test code
+            val bgd = GestureDetector(act, bubbleGestureListener).also { gBubbleGestureListener = it }
+            gBubbleOnTouchListener = NaaradDnDOnTouchListener(bgd, dnd, app, 1.0f, 1.0f, 45, 25)
+        }
     }
 
     //
@@ -449,11 +425,10 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
         lampArr = arrayOfNulls<ToggleButton>(3)
         bulbArr = arrayOfNulls<ImageView>(3)
 
-        val keys = getKeysAsArray(nodeID2Ndx!!)
+        val map = nodeID2Ndx ?: NaaradUtils.nodeID2NdxMap
+        val keys = getKeysAsArray(map)
 
-        // for (int i=0;i<keys.length;i++)
-        //     Log.d("NCF::makeSensorIcons","Keys: "+keys[i]);
-        val nBubbles = nodeID2Ndx!!.size
+        val nBubbles = map.size
 
         tempBubbleArr = arrayOfNulls<TextView>(nBubbles)
 
@@ -514,7 +489,7 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
         // If the position of icons was saved earlier, load the
         // position and re-position the icons.
         //
-        val oY = myApp!!.dpToPixel(20)
+        val oY = myApp?.dpToPixel(20) ?: 20
         val oX = oY
 
         val textOffset = myApp?.dpToPixel(5) ?: 5
@@ -533,8 +508,8 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
         for (i in tempBubbleArr.indices) {
             val tv = tempBubbleArr[i] ?: continue
             tv.measure(MeasureSpec.UNSPECIFIED, MeasureSpec.UNSPECIFIED)
-            val width = myApp!!.dpToPixel(45)
-            val height = myApp!!.dpToPixel(25)
+            val width = myApp?.dpToPixel(45) ?: 45
+            val height = myApp?.dpToPixel(25) ?: 25
             val x = getPreference("bubbleX$i", -1)
             val y = getPreference("bubbleY$i", -1)
             if (x >= 0 && y >= 0) {
@@ -542,15 +517,10 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
             }
         }
 
-        // Makes the handles accessed via the global variables
-        // gLampHandler, gOnTouchListener, gGestureDetector;
         makeHandlers(mActivity0)
-
-        // Install the gLampHandler, gOnTouchListener,
-        // gGestureDetector event/gesture handlers.
         installHandlers(gLampHandler, gOnTouchListener, lampArr, bulbArr)
-        tempBubbleArr[0]!!.setOnTouchListener(gBubbleOnTouchListener)
-        tempBubbleArr[1]!!.setOnTouchListener(gBubbleOnTouchListener)
+        tempBubbleArr.getOrNull(0)?.setOnTouchListener(gBubbleOnTouchListener)
+        tempBubbleArr.getOrNull(1)?.setOnTouchListener(gBubbleOnTouchListener)
     }
 
     //
@@ -561,65 +531,24 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
         savedInstanceState: Bundle?
     ): View {
         super.onCreateView(inflater, container, savedInstanceState)
-        myApp = requireActivity().application as NaaradApp
+        myApp = requireActivity().application as? NaaradApp
 
-        //Log.i("dpi: ",Integer.toString(myApp.densityDpi));
-        setRetainInstance(true)
         mActivity0 = activity
         gDnDParams = NaaradDnDParameters()
 
-        if (recreateView(mView)) return mView!!
+        val view = if (recreateView(mView)) mView else null
+        val rootView = view ?: inflater.inflate(R.layout.activity_naarad_control, container, false).also { mView = it }
 
-        mView = inflater.inflate(R.layout.activity_naarad_control, container, false)
-        makeSensorIcons(mView!!)
+        makeSensorIcons(rootView)
+        rootView.background?.alpha = 100
 
-        // //
-        // // To add more icons/buttons, adding to the following arrays
-        // // would be sufficient.
-        // //
-        // lampArr = new ToggleButton[3];
-        // bulbArr = new ImageView[3];
-        // tempBubbleArr = new TextView[2];
-
-        // lampArr[0]  = lamp0 = (ToggleButton) mView.findViewById(R.id.lamp0);
-        // lampArr[1]  = lamp1 = (ToggleButton) mView.findViewById(R.id.lamp1);
-        // lampArr[2]  = lamp2 = (ToggleButton) mView.findViewById(R.id.lamp2);
-        // bulbArr[0]  = bulb0 = (ImageView) mView.findViewById(R.id.iv1); 
-        // bulbArr[1]  = bulb1 = (ImageView) mView.findViewById(R.id.iv2); 
-        // bulbArr[2]  = bulb2 = (ImageView) mView.findViewById(R.id.iv3); 
-        // tempBubbleArr[0] = (TextView) mView.findViewById(R.id.tv1);
-        // tempBubbleArr[0].setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
-        // tempBubbleArr[0].setText(Html.fromHtml("<p><b>----C</b><font size =\"50\" color=\"#0066FF\"></font></p>"));
-        // tempBubbleArr[0].setTextColor(Color.parseColor("white"));
-        // tempBubbleArr[1] = (TextView) mView.findViewById(R.id.tv2);
-        // tempBubbleArr[1].setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
-        // tempBubbleArr[1].setText(Html.fromHtml("<p><b>----C</b><font size =\"50\" color=\"#0066FF\"></font></p>"));
-        // tempBubbleArr[1].setTextColor(Color.parseColor("white"));
-        // // Makes the handles accessed via the global variables
-        // // gLampHandler, gOnTouchListener, gGestureDetector;
-        // makeHandlers(mActivity0);
-
-        // // Install the gLampHandler, gOnTouchListener,
-        // // gGestureDetector event/gesture handlers.
-        // installHandlers(gLampHandler, gOnTouchListener, lampArr, bulbArr);
-        // tempBubbleArr[0].setOnTouchListener(gBubbleOnTouchListener);
-        // tempBubbleArr[1].setOnTouchListener(gBubbleOnTouchListener);
-        mView!!.background.alpha = 100
-
-        return mView!!
+        return rootView
     }
 
     override fun onResume() {
         super.onResume()
-        makeSensorIcons(mView!!)
-        (mView?.layoutParams as? MarginLayoutParams)?.let { lp ->
-            // Log.d("NCF::onResume",
-            //     "Offsets: " +
-            //             lp.leftMargin + " " +
-            //             lp.rightMargin
-            // )
-        }
-        getRetainInstance()
+        mView?.let { view -> makeSensorIcons(view) }
+        controlViewModel.lastJsonData?.let { json -> setSensorValues(json) }
         Log.d("NCF::onResume","From NCF::onResume")
     }
 
@@ -701,37 +630,34 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
     //
     fun sendCommand(cmd: String): String? {
         try {
-            if (cmd.length == 0) return null
+            if (cmd.isEmpty()) return null
 
             val host = NaaradUtils.serverName
             val port = NaaradUtils.serverPort
 
-            client = Socket(host, port)
-            printwriter = PrintWriter(client!!.getOutputStream(), true)
+            val soc = NaaradUtils.naaradSocket(host, port)
+            val pw = PrintWriter(soc.getOutputStream(), true)
+//            client = soc
+//            printwriter = pw
 
-            printwriter!!.write(mkMessage("open"))
-            printwriter!!.flush()
+            NaaradUtils.naaradWriter(pw, "open")
             SystemClock.sleep(500)
 
-            printwriter!!.write(mkMessage(cmd)) // write the message to output stream
-            printwriter!!.flush()
+            NaaradUtils.naaradWriter(pw, cmd)
             SystemClock.sleep(500)
 
-            printwriter!!.write(mkMessage("done"))
-            printwriter!!.flush()
+            NaaradUtils.naaradWriter(pw, "done")
 
-            printwriter!!.close()
-            client!!.close() // closing the connection
+            pw.close()
+            soc.close()
+//            printwriter = null
+//            client = null
         } catch (e: UnknownHostException) {
             var msg = ""
             if (!isWifiConnected) msg = "Wifi is not connected.\n"
-            msg =
-                msg + "Unknown host: " + NaaradUtils.serverName + ":" + NaaradUtils.serverPort.toString() + "\nCheck settings"
-            return msg
+            return msg + "Unknown host: " + NaaradUtils.serverName + ":" + NaaradUtils.serverPort.toString() + "\nCheck settings"
         } catch (e: IOException) {
-            val msg =
-                "Error connecting to " + NaaradUtils.serverName + ":" + NaaradUtils.serverPort.toString() + "\nCheck settings"
-            return msg
+            return "Error connecting to " + NaaradUtils.serverName + ":" + NaaradUtils.serverPort.toString() + "\nCheck settings"
         }
         return ALL_WELL
     }
@@ -747,10 +673,12 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
                     toast(result, Gravity.TOP or Gravity.RIGHT)
                     currentToggleButton?.let { btn ->
                         val on = btn.isChecked
-                        val tag = (btn.tag as String?)!!.toInt()
+                        val tag = (btn.tag as? String)?.toIntOrNull() ?: 0
 
                         btn.isChecked = !on
-                        setBulbBG(bulbArr[tag]!!, on)
+                        bulbArr.getOrNull(tag)?.let { bulb ->
+                            setBulbBG(bulb, on)
+                        }
                     }
                 }
             }

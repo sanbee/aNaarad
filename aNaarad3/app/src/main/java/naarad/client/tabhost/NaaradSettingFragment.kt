@@ -202,7 +202,7 @@ class NaaradSettingFragment : NaaradAbstractFragment() {
         if (mView == null) mView = inflater.inflate(
             R.layout.activity_naarad_setting,
             container, false
-        )
+        )?.apply { isFocusableInTouchMode = true }
         else (mView?.parent as? ViewGroup)?.removeView(mView)
 
         serverNameField =
@@ -262,7 +262,7 @@ class NaaradSettingFragment : NaaradAbstractFragment() {
             ) {
                 validateAndUpdatePingTimeout()
                 hideKeyboard(v)
-                v.clearFocus()
+                mView?.requestFocus()
                 true
             } else {
                 false
@@ -287,7 +287,7 @@ class NaaradSettingFragment : NaaradAbstractFragment() {
             ) {
                 validateAndUpdatePlotTimerange()
                 hideKeyboard(v)
-                v.clearFocus()
+                mView?.requestFocus()
                 true
             } else {
                 false
@@ -312,7 +312,7 @@ class NaaradSettingFragment : NaaradAbstractFragment() {
             ) {
                 validateAndUpdateReSyncTimescale()
                 hideKeyboard(v)
-                v.clearFocus()
+                mView?.requestFocus()
                 true
             } else {
                 false
