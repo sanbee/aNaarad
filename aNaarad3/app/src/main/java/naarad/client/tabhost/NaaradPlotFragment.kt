@@ -302,6 +302,21 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
         chart.invalidate()
     }
 
+    // Refresh the chart with the provided data, and scroll to the
+    // viewpoint to the x-value given by x (typically the last point
+    // in the data stream).  If chart or data are not provided, get it
+    // from global mLineChart.
+    fun refreshPlot(x: Double, chart: LineChart? = null, data: LineData? = null) {
+	val mychart = chart ?: mLineChart ?: return
+	val mydata = data ?: mychart.data ?: return
+
+	mydata.notifyDataChanged()
+	mychart.notifyDataSetChanged()
+
+	// Scroll the viewport to the new point on the right
+	mychart.moveViewToX(x.toFloat())
+    }
+
     fun addNewData(seriesIndex: Int, x: Double, y: Double,force: Boolean=false) {
         val chart = mLineChart ?: return
         val data = chart.data ?: return
@@ -331,11 +346,7 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
             }
         }
 
-        data.notifyDataChanged()
-        chart.notifyDataSetChanged()
-
-        // 3. Scroll the viewport to the new point on the right
-        chart.moveViewToX(x.toFloat())
+	refreshPlot(x, chart, data)
     }
 
     fun abortSleeperForTimeoutChange() {
@@ -487,25 +498,32 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
             }
         }
 
+        /**
+         * Fetches historical messages and returns an Array of ArrayList<String>
+         * where messages for node keys[i] are placed at index NaaradUtils.nodeID2NdxMap[keys[i]].
+         */
         private fun naaradGetDataHistoryEngine(
             keys: IntArray,
-            mySoc: Socket
-        ) {
+            mySoc: Socket,
+            publish: Boolean = true
+        ): Array<ArrayList<String>> {
+            val map = NaaradUtils.nodeID2NdxMap
+            val maxIndex = (map.values.filterNotNull().maxOrNull() ?: 1) + 1
+            val messagesArray = Array(maxIndex) { ArrayList<String>() }
+
             val mySocWriter = PrintWriter(mySoc.getOutputStream(), true)
             val mySocReader = BufferedReader(InputStreamReader(mySoc.getInputStream()), 1000)
-	    // Send the name for connection request.  This is required
-	    // for the server to establish a connection with this
-	    // name.
-            naaradWriter(mySocWriter, message="NaaradApp_GetHistroyEngine")
 
+            naaradWriter(mySocWriter, message = "NaaradApp_GetHistoryEngine")
             SystemClock.sleep(100)
 
             var nPackets: Int = 0
             for (i in keys.indices) {
                 if (allDone || isCancelled) break
-                val msg = "gethpkt " + keys[i].toString()
-                //Log.i("NaaradData", "=== Requesting Historical Data for Sensor Node ===" + msg)
-                Log.d("naaradGetDataHistoryEngine","=== Requesting Historical Data for Sensor Node ===" + msg)
+                val nodeid = keys[i]
+                val seriesIndex = map[nodeid] ?: i
+                val msg = "gethpkt $nodeid"
+                Log.d("naaradGetDataHistoryEngine", "=== Requesting Historical Data for Sensor Node ===" + msg)
                 naaradWriter(mySocWriter, msg)
                 SystemClock.sleep(100)
 
@@ -515,22 +533,30 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
                     message = NaaradUtils.naaradReader(mySocReader)
                     nPackets++
                     if (message.contains("PHINISHED")) {
-                        //Log.i("NaaradData", "=== Completed Historical Data for Sensor Node ${keys[i]} === " + nPackets)
-                        Log.d("naaradGetDataHistoryEngine","=== Completed Historical Data for Sensor Node ${keys[i]} === " + nPackets)
+                        Log.d("naaradGetDataHistoryEngine", "=== Completed Historical Data for Sensor Node $nodeid === " + nPackets)
                     }
-                    if (!message.contains("PHINISHED")) {
-                        publishJSON(message)
+                    if (!message.contains("PHINISHED") && message.contains("{")) {
+                        if (publish) {
+                            publishJSON(message)
+                        }
+                        messagesArray[seriesIndex].add(message)
                     }
                 }
             }
-            if (nPackets > 0) {
+
+            if (nPackets > 0 && publish) {
                 activity?.runOnUiThread {
                     reDrawForce()
                 }
             }
-            naaradWriter(mySocWriter, "done")
-            // mySoc.close()
+
+            try {
+                naaradWriter(mySocWriter, "done")
+            } catch (ignored: Exception) {}
+
+            return messagesArray
         }
+
 
 	private fun naaradGetCurrentDataEngine(
 	    keys: IntArray,
