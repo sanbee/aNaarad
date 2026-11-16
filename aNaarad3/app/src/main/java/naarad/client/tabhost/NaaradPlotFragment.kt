@@ -306,6 +306,9 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
     // viewpoint to the x-value given by x (typically the last point
     // in the data stream).  If chart or data are not provided, get it
     // from global mLineChart.
+    //
+    // This is ~zero overhead if called with valid chart and data.
+    //
     fun refreshPlot(x: Double, chart: LineChart? = null, data: LineData? = null) {
 	val mychart = chart ?: mLineChart ?: return
 	val mydata = data ?: mychart.data ?: return
@@ -440,20 +443,25 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
             execute()
         }
 
-        // private fun openSocket(host: String, port: Int): Socket? {
-        //     if (host.isEmpty() || port <= 0) return null
-        //     return try {
-        //         val socket = Socket()
-        //         socket.soTimeout = 3000
-        //         socket.connect(java.net.InetSocketAddress(host, port), 2000)
-        //         if (socket.isConnected) {
-        //             activeSocket = socket
-        //             socket
-        //         } else null
-        //     } catch (e: Exception) {
-        //         null
-        //     }
-        // }
+	// Open a naarad socket
+        private fun openNaaradSocket(host: String, port: Int): Socket? {
+	    val socket = activeSocket ?: naaradSocket(host, port)?.also { activeSocket = it } ?: return null
+	    return socket;
+	}
+
+	private fun finishNaaradProtocol(mySocWriter: PrintWriter)
+	{
+            naaradWriter(mySocWriter, "done")
+	}
+
+	// Send "done" message to the Naarad server.  That closes the
+	// socket on the server side.  Close the socket on the client
+	// side as well.
+	private fun closeNaaradSocket()
+	{
+	    activeSocket?.close()
+	    activeSocket=null;
+	}
 
         private fun publishJSON(message: String, force :Boolean=false) {
             val jsonStart = message.indexOf('{')
@@ -498,10 +506,11 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
             }
         }
 
-        /**
-         * Fetches historical messages and returns an Array of ArrayList<String>
-         * where messages for node keys[i] are placed at index NaaradUtils.nodeID2NdxMap[keys[i]].
-         */
+	//
+        // Fetches historical messages and returns an Array of
+	// ArrayList<String> where messages for node keys[i] are
+	// placed at index NaaradUtils.nodeID2NdxMap[keys[i]].
+	//
         private fun naaradGetDataHistoryEngine(
             keys: IntArray,
             mySoc: Socket,
@@ -551,8 +560,11 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
             }
 
             try {
-                naaradWriter(mySocWriter, "done")
+		finishNaaradProtocol(mySocWriter)
+                //naaradWriter(mySocWriter, "done")
             } catch (ignored: Exception) {}
+
+	    //closeNaaradSocket()
 
             return messagesArray
         }
@@ -589,19 +601,21 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
 	    // Send done signal to the server when finished querying all nodes
 	    try
 	    {
-		//        val mySocWriter = PrintWriter(mySoc.getOutputStream(), true)
-		naaradWriter(mySocWriter, "done")
+		finishNaaradProtocol(mySocWriter)
+//		naaradWriter(mySocWriter, "done")
 	    }
 	    catch (ignored: Exception) {}
-	    finally {
-                try {
-		    activeSocket?.close()
-                } catch (ignored: Exception) {}
-                activeSocket = null
-	    }
+
+	    //closeNaaradSocket()
+
 	    return messagesList
 	}
 
+	//
+	// This calls naaradGetDataHistoryEngine() or
+	// naaradGetCurrentDataEngine(). Both close the socket at the
+	// end of their communication.
+	//
 	private fun naaradGetData(
 	    keys: IntArray,
 	    getHistory: Boolean
@@ -624,51 +638,13 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
 	    } catch (e: Exception) {
 		Log.d("naaradGetData", "Error: " + e.message)
 	    } finally {
-		try {
-		    socket.close()
-		} catch (ignored: Exception) {}
-		activeSocket = null
+		closeNaaradSocket()
+		// try {
+		//     socket.close()
+		// } catch (ignored: Exception) {}
+		// activeSocket = null
 	    }
 	}
-
-        // LEGECY CODE BELOW
-        // private fun naaradGetData(
-        //     keys: IntArray,
-        //     getHistory: Boolean
-        // ) {
-        //     val host = NaaradUtils.serverName
-        //     val port = NaaradUtils.serverPort
-        //     val socket = activeSocket ?: naaradSocket(host, port) ?: return
-        //     activeSocket = socket
-
-        //     try {
-        //         if (getHistory) {
-        //             naaradGetDataHistoryEngine(keys, socket)
-        //         } else {
-        //             val messages = naaradGetCurrentDataEngine(keys, socket)
-        //             for (m in messages) {
-        //                 Log.d("naaradGetDat", m)
-        //             }
-        //         }
-        //     } catch (e: Exception) {
-        //         Log.d("naaradGetData", "Error: " + e.message)
-        //     } finally {
-        //         try {
-        //             socket.close()
-        //         } catch (ignored: Exception) {}
-        //         activeSocket = null
-        //     }
-        // }
-
-	// inline private fun isMessageValid(message: String) : JSONObject
-	// {
-        //     val jsonStart = message.indexOf('{')
-        //     val jsonEnd = message.lastIndexOf('}')
-        //     if (jsonStart >= 0 && jsonEnd > jsonStart)
-	// 	return JSONObject(message.substring(jsonStart, jsonEnd + 1))
-	//     else
-	// 	throw(Exception("message is not valid: " + message))
-	// }
 
 	private fun parseTimestampFromMessage(message: String): Long
 	{
@@ -705,112 +681,121 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
 	// published.  If not, this acts like
 	// naaradGetData(keys,getHistory=false).
 	//
-	private fun syncData(keys: IntArray)
-	{
+	// This effectively calls both naaradGetCurrentDataEngine()
+	// and naaradGetDataHistoryEngine() (in this order).  Since
+	// the first closes the socket, it needs to be re-opened
+	// before the second call.
+	//
+	private fun syncData(keys: IntArray) {
 	    if (keys.isEmpty() || allDone || isCancelled) return
 	    val host = NaaradUtils.serverName
 	    val port = NaaradUtils.serverPort
-	    if (activeSocket == null)
-		activeSocket = naaradSocket(host, port) ?: return
 
-	    try
-	    {
-		// 1. Acquire current message for the first node in keys
-		// val firstNode = keys[0]
-		// val firstMsg = naaradGetSingleDataForNode(firstNode, activeSocket!!)
+	    try {
+		val socket = activeSocket ?: naaradSocket(host, port)?.also { activeSocket = it } ?: return
+		//val socket = openNaaradSocket(host,port)
 
-		//
-		// Fallback to emptyList() keeps the type as List<String>
-		//
-		// Thought (SB's):
-		//   The following code achieves what would be
-		//   achieved in other languages with checks if
-		//   various variables (activeSocket, return value of
-		//   naaradGetDataONlyEngine(), etc.) is null or
-		//   blank.  The code below does not look more
-		//   readable, or any shorter either!  What's the
-		//   point then?
-		val messages = activeSocket?.let { socket ->
-		    naaradGetCurrentDataEngine(keys, socket, publish=false)
-		} ?: emptyList()
+		val messages = naaradGetCurrentDataEngine(keys, socket, publish = false)
+		val firstMsg = messages.getOrNull(0) ?: ""
 
-		// for (m in messages) Log.d("syncData", m)
-
-		val firstMsg = messages?.getOrNull(0) ?: ""
-		// if (isMessageValid(firstMsg) throw(Exception("syncData: First message is not valid: "+message));
-
-		if (firstMsg.contains("{"))
-		{
-		    // 2. Compute latestTimeMs for the first node
+		if (firstMsg.contains("{")) {
+		    // Compute latestTimeMs and lastPlotTimeMs for the first node
 		    val latestTimeMs = parseTimestampFromMessage(firstMsg)
-		    val firstNode=keys[0]
+		    val firstNode = keys[0]
 
-		    // 3. Get lastPlotTimeMs for the first node
 		    val map = NaaradUtils.nodeID2NdxMap
 		    val seriesIndex = map[firstNode] ?: 0
-
 		    val dataSet = mLineChart?.data?.getDataSetByIndex(seriesIndex) as? LineDataSet
 
-		    val lastPlotTimeMs =
-			if (dataSet != null && dataSet.entryCount > 0)
-			   dataSet.getEntryForIndex(dataSet.entryCount - 1).x.toLong()
-			else 0L;
+		    val lastPlotTimeMs = if (dataSet != null && dataSet.entryCount > 0) {
+			dataSet.getEntryForIndex(dataSet.entryCount - 1).x.toLong()
+		    } else 0L
 
 		    val timeDiffMs = latestTimeMs - lastPlotTimeMs
-		    //Log.d("syncData", "times: "+(latestTimeMs/1000.0).toString()+ " " + (lastPlotTimeMs/1000.0).toString())
+		    var gotHistory = false
 
-		    // Log.d("syncData",
-		    // 	  " Gap of ${timeDiffMs / 60000}m for node $firstNode, SyncTimescale: ${NaaradUtils.livePlotReSyncTimescale * 1000L/60000}m.")
+		    // Check if time difference > livePlotReSyncTimescale
+		    if (lastPlotTimeMs > 0 && timeDiffMs > NaaradUtils.livePlotReSyncTimescale * 1000L) {
+			Log.d("syncData", "Gap of ${"%.2f".format(timeDiffMs / 60000F)}m > " +
+			      "${"%.2f".format(NaaradUtils.livePlotReSyncTimescale * 1000L / 60000F)}m for node $firstNode. Fetching history...")
 
-		    // 4. Check if time difference > NaaradUtils.livePlotReSyncTimescale in sec converted to Ms
-		    var gotHistory :Boolean=false
-		    if (lastPlotTimeMs > 0 && timeDiffMs > NaaradUtils.livePlotReSyncTimescale * 1000L)
-		    {
-			Log.d("syncData", "Gap of ${"%.2f".format(timeDiffMs / 60000F)}m >"
-			      +" ${"%.2f".format(NaaradUtils.livePlotReSyncTimescale * 1000L/60000F)}m"
-			      +" for node $firstNode. Fetching history...")
+			// // 1. Re-acquire historical data on a fresh socket
+			try { activeSocket?.close() } catch (ignored: Exception) {}
+			activeSocket = null
 
-			// Clear existing dataset before refilling historical stream
-			activity?.runOnUiThread	{
-			    val dataSet1 = mLineChart?.data?.getDataSetByIndex(0) as? LineDataSet
-			    val dataSet2 = mLineChart?.data?.getDataSetByIndex(1) as? LineDataSet
-			    dataSet1?.clear()
-			    dataSet2?.clear()
-			    mLineChart?.data?.notifyDataChanged()
-			    mLineChart?.notifyDataSetChanged()
+			val histSocket = naaradSocket(host, port)?.also { activeSocket = it } ?: return
+			//val histSocket = openNaaradSocket(host, port);
+
+			val hmessages = naaradGetDataHistoryEngine(keys, histSocket, publish = false)
+			gotHistory = true
+
+			var lastX = 0.0
+
+			// 2. Process historical data for each node: append only points with timestamps > lastT
+			for (nodeid in keys) {
+			    val sIndex = map[nodeid] ?: 0
+			    val nodeHistMessages = if (sIndex < hmessages.size) hmessages[sIndex] else ArrayList()
+			    val nodeDataSet = mLineChart?.data?.getDataSetByIndex(sIndex) as? LineDataSet
+
+			    if (nodeHistMessages.isNotEmpty()) {
+				if (nodeDataSet != null && nodeDataSet.entryCount > 0) {
+				    // Get timestamp of last plotted point for this node
+				    val lastT = nodeDataSet.getEntryForIndex(nodeDataSet.entryCount - 1).x.toLong()
+
+				    // Find first historical point with timestamp strictly greater than lastT
+				    val n = nodeHistMessages.indexOfFirst { msg ->
+					parseTimestampFromMessage(msg) > lastT
+				    }
+
+				    // Append only points with timestamps later than lastT
+				    if (n != -1) {
+					for (i in n until nodeHistMessages.size) {
+					    publishJSON(nodeHistMessages[i], force = true)
+					}
+				    }
+				} else {
+				    // Plot is empty: publish all historical messages for this node
+				    for (msg in nodeHistMessages) {
+					publishJSON(msg, force = true)
+				    }
+				}
+
+				if (nodeDataSet != null && nodeDataSet.entryCount > 0) {
+				    val curLastX = nodeDataSet.getEntryForIndex(nodeDataSet.entryCount - 1).x.toDouble()
+				    if (curLastX > lastX) lastX = curLastX
+				}
+			    }
 			}
 
-			// Fetch and re-plot historical data for all
-			// nodes in keys
-			naaradGetData(keys, getHistory = true)
-			gotHistory=true
+			// 3. Use refreshPlot() to re-plot the resulting plot data streams for each node
+			activity?.runOnUiThread {
+			    refreshPlot(lastX)
+			}
 		    }
 
-		    // Always publish the current messages.  Forcing
-		    // them to be published even if the sensor values
-		    // did not change if data streams in the app were
-		    // updated (gotHistory == true).
-		    for (m in messages)
-		    {
+		    // Always publish current messages
+		    for (m in messages) {
 			if (allDone || isCancelled) break
-			if (m.contains("{"))
-			{
-			    //Log.d("syncData ", m+" "+gotHistory.toString())
-			    publishJSON(m,force=gotHistory)
+			if (m.contains("{")) {
+			    publishJSON(m, force = gotHistory)
 			}
 		    }
 		}
+	    } catch (e: Exception) {
+		Log.d("syncData", "Error in syncData: ${e.javaClass.simpleName}: " + e.message)
+	    } finally {
+		try {
+		    activeSocket?.getOutputStream()?.let { outStream ->
+			val writer = PrintWriter(outStream, true)
+			//naaradWriter(writer, "done")
+			finishNaaradProtocol(writer)
+		    }
+		} catch (ignored: Exception) {}
+		try {
+		    activeSocket?.close()
+		} catch (ignored: Exception) {}
+		activeSocket = null
 	    }
-	    catch (e: Exception)
-	    {
-		Log.d("syncData", "Error in syncData: ${e.javaClass.simpleName}:" + e.message)
-	    }
-	    // finally {
-	    //     try {
-	    //         activeSocket?.close()
-	    //     } catch (ignored: Exception) {}
-	    //     activeSocket = null
-	    // }
 	}
 
         fun doInBackground(): String? {
