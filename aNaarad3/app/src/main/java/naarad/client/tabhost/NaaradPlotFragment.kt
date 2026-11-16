@@ -561,10 +561,10 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
 
             try {
 		finishNaaradProtocol(mySocWriter)
-                //naaradWriter(mySocWriter, "done")
-            } catch (ignored: Exception) {}
+		closeNaaradSocket()
+            }
+	    catch (ignored: Exception) {}
 
-	    //closeNaaradSocket()
 
             return messagesArray
         }
@@ -599,14 +599,11 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
 	    }
 
 	    // Send done signal to the server when finished querying all nodes
-	    try
-	    {
+	    try {
 		finishNaaradProtocol(mySocWriter)
-//		naaradWriter(mySocWriter, "done")
+		closeNaaradSocket()
 	    }
 	    catch (ignored: Exception) {}
-
-	    //closeNaaradSocket()
 
 	    return messagesList
 	}
@@ -639,10 +636,6 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
 		Log.d("naaradGetData", "Error: " + e.message)
 	    } finally {
 		closeNaaradSocket()
-		// try {
-		//     socket.close()
-		// } catch (ignored: Exception) {}
-		// activeSocket = null
 	    }
 	}
 
@@ -681,6 +674,10 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
 	// published.  If not, this acts like
 	// naaradGetData(keys,getHistory=false).
 	//
+	// If historical data is re-acquired, align the time-axis of
+	// plotted and historical data, and append the missing data
+	// from the historical data stream.
+	//
 	// This effectively calls both naaradGetCurrentDataEngine()
 	// and naaradGetDataHistoryEngine() (in this order).  Since
 	// the first closes the socket, it needs to be re-opened
@@ -688,8 +685,14 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
 	//
 	private fun syncData(keys: IntArray) {
 	    if (keys.isEmpty() || allDone || isCancelled) return
-	    val host = NaaradUtils.serverName
-	    val port = NaaradUtils.serverPort
+	    val host = NaaradUtils.serverName ?: run {
+		Log.d("syncData", "Incorrrect NaaradUtils.serverName (${NaaradUtils.serverName})")
+		return
+	    }
+	    val port = NaaradUtils.serverPort ?: run {
+		Log.d("syncData", "Incorrrect NaaradUtils.serverPort (${NaaradUtils.serverPort})")
+		return
+	    }
 
 	    try {
 		val socket = activeSocket ?: naaradSocket(host, port)?.also { activeSocket = it } ?: return
@@ -720,13 +723,16 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
 			      "${"%.2f".format(NaaradUtils.livePlotReSyncTimescale * 1000L / 60000F)}m for node $firstNode. Fetching history...")
 
 			// // 1. Re-acquire historical data on a fresh socket
-			try { activeSocket?.close() } catch (ignored: Exception) {}
-			activeSocket = null
+			closeNaaradSocket()
+			val histSocket = openNaaradSocket(host, port) ?: run {
+			    Log.d("syncData", "Unable to open historical socket to $host:$port")
+			    return
+			}
 
-			val histSocket = naaradSocket(host, port)?.also { activeSocket = it } ?: return
-			//val histSocket = openNaaradSocket(host, port);
-
-			val hmessages = naaradGetDataHistoryEngine(keys, histSocket, publish = false)
+			val hmessages = naaradGetDataHistoryEngine(keys, histSocket, publish = false) ?:  run {
+			    Log.d("syncData", "Error in getting historical data")
+			    return
+			}
 			gotHistory = true
 
 			var lastX = 0.0
@@ -750,7 +756,7 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
 				    // Append only points with timestamps later than lastT
 				    if (n != -1) {
 					for (i in n until nodeHistMessages.size) {
-					    publishJSON(nodeHistMessages[i], force = true)
+					    publishJSON(nodeHistMessages[i])
 					}
 				    }
 				} else {
@@ -784,17 +790,17 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
 	    } catch (e: Exception) {
 		Log.d("syncData", "Error in syncData: ${e.javaClass.simpleName}: " + e.message)
 	    } finally {
+		// Close naarad protocol, and then close the naarad
+		// socket
 		try {
 		    activeSocket?.getOutputStream()?.let { outStream ->
 			val writer = PrintWriter(outStream, true)
-			//naaradWriter(writer, "done")
 			finishNaaradProtocol(writer)
 		    }
 		} catch (ignored: Exception) {}
 		try {
-		    activeSocket?.close()
+		    closeNaaradSocket()
 		} catch (ignored: Exception) {}
-		activeSocket = null
 	    }
 	}
 
@@ -809,8 +815,8 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
 
 	    // NaaradUtils.livePingTimeout is a cached version of
 	    // NaaradUtils.currentPingTimeout.  When the latter is
-	    // changed, it saved vis setPreferences() and re-cached
-	    // for efficient access at run time.
+	    // changed, it is made persistent via setPreferences() and
+	    // re-cached for efficient access at run time.
 	    while (!allDone) {
 		// This always gets the latest value of Ping timeout.
 		// Internally, this variable is updated from Settings
