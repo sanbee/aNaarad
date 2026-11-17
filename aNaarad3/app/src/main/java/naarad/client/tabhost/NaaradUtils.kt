@@ -34,6 +34,10 @@ import android.security.NetworkSecurityPolicy
 import android.os.Build
 
 object NaaradUtils {
+
+    const val DEFAULT_PORT = 1234
+    const val DEFAULT_SERVER = "192.168.0.126"
+
     var prefs: SharedPreferences? = null
     var nodeID2Ndx: java.util.HashMap<Int?, Int?>? = null
 
@@ -91,15 +95,9 @@ object NaaradUtils {
             }
         }
 
-    val defaultPort: Int
-        get() = getPreference("serverPort", 1234)
-
-    val defaultServer: String?
-        get() = getPreference("serverName", "192.168.0.126")
-
-    var serverName: String?
+    var serverName: String
         get() {
-            return getPreference("serverName", defaultServer) ?: defaultServer
+            return getPreference("serverName", DEFAULT_SERVER)
         }
         set(name) {
             setPreference("serverName", name)
@@ -107,7 +105,7 @@ object NaaradUtils {
 
     var serverPort: Int
         get() {
-            return getPreference("serverPort", defaultPort)
+            return getPreference("serverPort", DEFAULT_PORT)
         }
         set(port) {
             setPreference("serverPort", port)

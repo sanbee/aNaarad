@@ -41,7 +41,6 @@ class MainActivity : FragmentActivity(), NaaradPlotFragment.nPlotDataArrivalList
     private var mViewPager: ViewPager2? = null
     private var mTabLayout: TabLayout? = null
     private var gControlFragment: NaaradControlFragment? = null
-    private var b1: TextView? = null
     private var gUIHandler: Handler? = null
     private var gRunnableBlinker: mRunnable? = null
 
@@ -83,8 +82,10 @@ class MainActivity : FragmentActivity(), NaaradPlotFragment.nPlotDataArrivalList
 
     override fun onDataArrival(json: String?) {
 	val controlFragment = gControlFragment
+	// This returns the TextView that was modified by
+	// setSensorValues().  Since we don't need it, it is ignored.
 	if (json != null && controlFragment != null) {
-	    b1 = controlFragment.setSensorValues(json)
+	    controlFragment.setSensorValues(json)
 	}
 
         if (!isBlinking) {

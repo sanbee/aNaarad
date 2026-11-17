@@ -444,8 +444,13 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
         }
 
 	// Open a naarad socket
-        private fun openNaaradSocket(host: String, port: Int): Socket? {
-	    val socket = activeSocket ?: naaradSocket(host, port)?.also { activeSocket = it } ?: return null
+        private fun openNaaradSocket(host: String, port: Int, client: String=""): Socket? {
+	    val socket = activeSocket ?:
+		naaradSocket(host, port)?.also { activeSocket = it } ?:
+		run {
+		    Log.d(client, "Error in openNaaradSocket(${NaaradUtils.serverName}, ${NaaradUtils.serverPort})")
+		    return null
+		}
 	    return socket;
 	}
 
@@ -621,7 +626,7 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
 	    val port = NaaradUtils.serverPort
 	    
 	    // Assign to a local non-null val, creating and storing a new socket only if activeSocket is null
-	    val socket = activeSocket ?: naaradSocket(host, port)?.also { activeSocket = it } ?: return
+	    val socket = openNaaradSocket(host, port, "naaradGetData") ?: return
 
 	    try {
 		if (getHistory) {
@@ -685,18 +690,12 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
 	//
 	private fun syncData(keys: IntArray) {
 	    if (keys.isEmpty() || allDone || isCancelled) return
-	    val host = NaaradUtils.serverName ?: run {
-		Log.d("syncData", "Incorrrect NaaradUtils.serverName (${NaaradUtils.serverName})")
-		return
-	    }
-	    val port = NaaradUtils.serverPort ?: run {
-		Log.d("syncData", "Incorrrect NaaradUtils.serverPort (${NaaradUtils.serverPort})")
-		return
-	    }
+	    val host = NaaradUtils.serverName
+	    val port = NaaradUtils.serverPort
 
 	    try {
-		val socket = activeSocket ?: naaradSocket(host, port)?.also { activeSocket = it } ?: return
-		//val socket = openNaaradSocket(host,port)
+		//val socket = activeSocket ?: naaradSocket(host, port)?.also { activeSocket = it } ?: return
+		val socket = openNaaradSocket(host,port,"syncData") ?: return
 
 		val messages = naaradGetCurrentDataEngine(keys, socket, publish = false)
 		val firstMsg = messages.getOrNull(0) ?: ""

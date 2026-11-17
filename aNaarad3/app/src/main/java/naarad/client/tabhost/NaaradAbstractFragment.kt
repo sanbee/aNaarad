@@ -37,10 +37,10 @@ abstract class NaaradAbstractFragment : Fragment() {
     @JvmField
     var nodeID2Ndx: java.util.HashMap<Int?, Int?>? = null
 
-    val defaultPort: Int
-        get() = NaaradUtils.defaultPort
-    val defaultServer: String?
-        get() = NaaradUtils.defaultServer
+    // val defaultPort: Int
+    //     get() = NaaradUtils.defaultPort
+    // val defaultServer: String?
+    //     get() = NaaradUtils.defaultServer
 
     @Suppress("UNCHECKED_CAST")
     fun getKeysAsArray(myMap: java.util.HashMap<*, *>): IntArray {
@@ -110,17 +110,17 @@ abstract class NaaradAbstractFragment : Fragment() {
         return prefs?.getString(name, defValue) ?: defValue
     }
 
-    var serverName: String?
-        get() = NaaradUtils.serverName
-        set(name) {
-            NaaradUtils.serverName = name
-        }
+    // var serverName: String?
+    //     get() = NaaradUtils.serverName
+    //     set(name) {
+    //         NaaradUtils.serverName = name
+    //     }
 
-    var serverPort: Int
-        get() = NaaradUtils.serverPort
-        set(port) {
-            NaaradUtils.serverPort = port
-        }
+    // var serverPort: Int
+    //     get() = NaaradUtils.serverPort
+    //     set(port) {
+    //         NaaradUtils.serverPort = port
+    //     }
 
     fun mkMessage(message: String): String {
         val n = message.length

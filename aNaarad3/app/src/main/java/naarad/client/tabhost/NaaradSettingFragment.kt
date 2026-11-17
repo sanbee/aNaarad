@@ -60,14 +60,14 @@ class NaaradSettingFragment : NaaradAbstractFragment() {
         val name = serverNameField?.text?.toString()?.trim()
         if (!name.isNullOrEmpty()) {
             gServerName = name
-            serverName = name
+//            serverName = name
         }
         val portStr = serverPortField?.text?.toString()?.trim()
         try {
-            val port = portStr?.toInt() ?: defaultPort
+            val port = portStr?.toInt() ?: NaaradUtils.serverPort
             if (port > 0) {
                 gServerPort = port
-                serverPort = port
+//                serverPort = port
             }
         } catch (nfe: NumberFormatException) {
             // keep existing port
@@ -211,8 +211,8 @@ class NaaradSettingFragment : NaaradAbstractFragment() {
             mView?.findViewById<View?>(R.id.serverPort) as? EditText
 
         // Pre-populate fields with remembered serverName and serverPort
-        val savedServerName = serverName ?: defaultServer
-        val savedServerPort = serverPort
+        val savedServerName = NaaradUtils.serverName// ?: defaultServer
+        val savedServerPort = NaaradUtils.serverPort
 
         gServerName = savedServerName
         gServerPort = savedServerPort
@@ -228,7 +228,7 @@ class NaaradSettingFragment : NaaradAbstractFragment() {
                 val name = s?.toString()?.trim()
                 if (!name.isNullOrEmpty()) {
                     gServerName = name
-                    serverName = name
+                    //serverName = name
                 }
             }
         })
@@ -238,10 +238,10 @@ class NaaradSettingFragment : NaaradAbstractFragment() {
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
             override fun afterTextChanged(s: Editable?) {
                 try {
-                    val port = s?.toString()?.trim()?.toInt() ?: defaultPort
+                    val port = s?.toString()?.trim()?.toInt() ?: NaaradUtils.serverPort
                     if (port > 0) {
                         gServerPort = port
-                        serverPort = port
+                        //serverPort = port
                         setButton?.setTextColor(Color.GREEN)
                     }
                 } catch (e: NumberFormatException) {
