@@ -82,9 +82,10 @@ class MainActivity : FragmentActivity(), NaaradPlotFragment.nPlotDataArrivalList
     private var isBlinking = false
 
     override fun onDataArrival(json: String?) {
-        if (json != null && gControlFragment != null) {
-            b1 = gControlFragment!!.setSensorValues(json)
-        }
+	val controlFragment = gControlFragment
+	if (json != null && controlFragment != null) {
+	    b1 = controlFragment.setSensorValues(json)
+	}
 
         if (!isBlinking) {
             isBlinking = true
@@ -105,8 +106,8 @@ class MainActivity : FragmentActivity(), NaaradPlotFragment.nPlotDataArrivalList
     override fun onResume() {
         super.onResume()
         val myApp = application as? NaaradApp
-        if (myApp != null && mViewPager != null) {
-            mViewPager!!.isUserInputEnabled = myApp.swipeState
+        if (myApp != null) {
+            mViewPager?.isUserInputEnabled = myApp.swipeState
         }
     }
 
@@ -114,27 +115,28 @@ class MainActivity : FragmentActivity(), NaaradPlotFragment.nPlotDataArrivalList
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        mViewPager = findViewById(R.id.view_pager)
-        mTabLayout = findViewById(R.id.tab_layout)
+        val viewPager = findViewById<ViewPager2>(R.id.view_pager).also { mViewPager = it }
+        val tabLayout = findViewById<TabLayout>(R.id.tab_layout).also { mTabLayout = it }
 
         val controlFragment = NaaradControlFragment.newInstance("Naarad Control Fragment")
         gControlFragment = controlFragment
         val plotFragment = NaaradPlotFragment.newInstanceNPF("Naarad Plot Fragment")
         val settingFragment = NaaradSettingFragment.newInstanceNSF("Naarad Setting Fragment")
 
-        pageAdapter = NaaradPagerAdapter(this, controlFragment, plotFragment, settingFragment)
-        mViewPager!!.adapter = pageAdapter
-        mViewPager!!.offscreenPageLimit = 2
+        val adapter = NaaradPagerAdapter(this, controlFragment, plotFragment, settingFragment)
+        pageAdapter = adapter
+        viewPager.adapter = adapter
+        viewPager.offscreenPageLimit = 2
 
         val myApp = application as? NaaradApp
-        if (myApp != null && mViewPager != null) {
+        if (myApp != null) {
             myApp.onSwipeStateChanged = { enabled ->
                 mViewPager?.isUserInputEnabled = enabled
             }
-            mViewPager!!.isUserInputEnabled = myApp.swipeState
+            viewPager.isUserInputEnabled = myApp.swipeState
         }
 
-        TabLayoutMediator(mTabLayout!!, mViewPager!!) { tab, position ->
+        TabLayoutMediator(tabLayout, viewPager) { tab, position ->
             val (icon, title) = when (position) {
                 0 -> "🎛️" to "Controls"
                 1 -> "📈" to "Sensors"
@@ -146,12 +148,12 @@ class MainActivity : FragmentActivity(), NaaradPlotFragment.nPlotDataArrivalList
                 gravity = Gravity.CENTER
                 textAlignment = View.TEXT_ALIGNMENT_CENTER
                 setLineSpacing(0f, 1.0f)
-                alpha = if (position == (mViewPager?.currentItem ?: 0)) 1.0f else 0.5f
+                alpha = if (position == viewPager.currentItem) 1.0f else 0.5f
             }
             tab.customView = tabTextView
         }.attach()
 
-        mTabLayout!!.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
+        tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
             override fun onTabSelected(tab: TabLayout.Tab) {
                 tab.customView?.alpha = 1.0f
             }

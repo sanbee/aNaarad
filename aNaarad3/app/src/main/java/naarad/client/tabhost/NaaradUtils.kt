@@ -28,7 +28,6 @@ import java.io.BufferedReader
 import java.io.IOException
 import java.io.PrintWriter
 import java.net.Socket
-import java.net.UnknownHostException
 import org.json.JSONException
 import android.view.Gravity
 import android.security.NetworkSecurityPolicy
@@ -41,7 +40,7 @@ object NaaradUtils {
     // Default time range of 30 min (in seconds)
     var livePlotReSyncTimescale: Double = currentPlotReSyncTimescale // To be used in loops
     var currentPlotReSyncTimescaleStr: String
-        get() = getPreference("reSyncTimescale", "30m") ?: "30m"
+        get() = getPreference("reSyncTimescale", "30m")
         set(value) {
             setPreference("reSyncTimescale", value)
             livePlotReSyncTimescale = parseHmsToSeconds(value)
@@ -55,7 +54,7 @@ object NaaradUtils {
     // Default time range of 2 days (in seconds)
     var livePlotTimerange: Double = currentPlotTimerange // To be used in loops
     var currentPlotTimerangeStr: String
-        get() = getPreference("plotTimerange", "2d") ?: "2d"
+        get() = getPreference("plotTimerange", "2d")
         set(value) {
             setPreference("plotTimerange", value)
             livePlotTimerange = parseHmsToSeconds(value)
@@ -72,7 +71,7 @@ object NaaradUtils {
     // the new value.
     var livePingTimeout: Double = currentPingTimeout // To be used in loops
     var currentPingTimeoutStr: String
-        get() = getPreference("pingTimeout", "1m") ?: "1m"
+        get() = getPreference("pingTimeout", "1m")
         set(value) {
             val oldVal = livePingTimeout
             setPreference("pingTimeout", value)
@@ -215,25 +214,21 @@ object NaaradUtils {
     fun mapNodeID2Ndx(nodeid: Int): Int {
         if (nodeid == 1) return 0
         if (nodeid == 3) return 1
-        return Math.abs(nodeid) % 2
+        return kotlin.math.abs(nodeid) % 2
     }
-    //
-    //---------------------------------------------------------------------------------------------
-    //
+
     fun recreateView(v: View?): Boolean {
         if (v != null) {
-            (v.parent as ViewGroup).removeView(v)
+            (v.parent as? ViewGroup)?.removeView(v)
             return true
-        } else return false
+        }
+        return false
     }
-    //
-    //---------------------------------------------------------------------------------------------
-    //
+
     fun mkMessage(message: String): String {
         val n = message.length
-        val lenStr = n.toString()
-        val totalLen = lenStr.length + n + 1
-        return totalLen.toString() + " " + message
+        val totalLen = n.toString().length + n + 1
+        return "$totalLen $message"
     }
     //
     //---------------------------------------------------------------------------------------------

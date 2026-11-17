@@ -22,7 +22,6 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.content.pm.ActivityInfo
 import android.net.ConnectivityManager
-import android.net.NetworkInfo
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
@@ -54,18 +53,19 @@ abstract class NaaradAbstractFragment : Fragment() {
 
     val nodeID2NdxMap: HashMap<*, *>
         get() {
-            nodeID2Ndx = java.util.HashMap<Int?, Int?>()
-            nodeID2Ndx!!.put(1, 0)
-            nodeID2Ndx!!.put(3, 1)
-
-            return nodeID2Ndx!!
+            val map = java.util.HashMap<Int?, Int?>().apply {
+                put(1, 0)
+                put(3, 1)
+            }
+            nodeID2Ndx = map
+            return map
         }
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
         if (context is Activity) {
             if (mActivity == null) mActivity = context
-            mActivity!!.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+            context.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
         }
         this.nodeID2NdxMap
     }
@@ -73,30 +73,29 @@ abstract class NaaradAbstractFragment : Fragment() {
     fun mapNodeID2Ndx(nodeid: Int): Int {
         if (nodeid == 1) return 0
         if (nodeid == 3) return 1
-        return Math.abs(nodeid) % 2
+        return kotlin.math.abs(nodeid) % 2
     }
 
     fun recreateView(v: View?): Boolean {
         if (v != null) {
-            (v.parent as ViewGroup).removeView(v)
+            (v.parent as? ViewGroup)?.removeView(v)
             return true
-        } else return false
+        }
+        return false
     }
 
     fun setPreference(name: String?, value: String?) {
         val ctx = activity ?: mActivity ?: return
-        prefs = ctx.getSharedPreferences("nSettings", Context.MODE_PRIVATE)
-        val editor: SharedPreferences.Editor = prefs!!.edit()
-        editor.putString(name, value)
-        editor.commit()
+        val sharedPrefs = ctx.getSharedPreferences("nSettings", Context.MODE_PRIVATE)
+        prefs = sharedPrefs
+        sharedPrefs.edit().putString(name, value).apply()
     }
 
     fun setPreference(name: String?, value: Int) {
         val ctx = activity ?: mActivity ?: return
-        prefs = ctx.getSharedPreferences("nSettings", Context.MODE_PRIVATE)
-        val editor: SharedPreferences.Editor = prefs!!.edit()
-        editor.putInt(name, value)
-        editor.commit()
+        val sharedPrefs = ctx.getSharedPreferences("nSettings", Context.MODE_PRIVATE)
+        prefs = sharedPrefs
+        sharedPrefs.edit().putInt(name, value).apply()
     }
 
     fun getPreference(name: String?, defValue: Int): Int {
@@ -125,9 +124,8 @@ abstract class NaaradAbstractFragment : Fragment() {
 
     fun mkMessage(message: String): String {
         val n = message.length
-        val lenStr = n.toString()
-        val totalLen = lenStr.length + n + 1
-        return totalLen.toString() + " " + message
+        val totalLen = n.toString().length + n + 1
+        return "$totalLen $message"
     }
 
     fun toast(msg: String?, gravity: Int) {
@@ -148,7 +146,9 @@ abstract class NaaradAbstractFragment : Fragment() {
     val isWifiConnected: Boolean
         get() {
             val connManager = (activity ?: mActivity)?.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+            @Suppress("DEPRECATION")
             val mWifi = connManager?.getNetworkInfo(ConnectivityManager.TYPE_WIFI)
+            @Suppress("DEPRECATION")
             return mWifi?.isConnected == true
         }
 
@@ -164,7 +164,7 @@ abstract class NaaradAbstractFragment : Fragment() {
         if (lenBuf.isEmpty()) return null
         val msgLen = try {
             lenBuf.toString().toInt()
-        } catch (e: NumberFormatException) {
+        } catch (_: NumberFormatException) {
             return null
         }
 

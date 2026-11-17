@@ -26,7 +26,6 @@ import android.util.DisplayMetrics
 import android.view.WindowManager
 import android.util.Log
 
-//import android.net.wifi.WifiManager.WifiLock;
 class NaaradApp : Application() {
     var onSwipeStateChanged: ((Boolean) -> Unit)? = null
 
@@ -46,35 +45,30 @@ class NaaradApp : Application() {
     var metrics: DisplayMetrics? = null
 
     fun setWifiState(turnON: Boolean) {
-        myWifiManager = getSystemService(WIFI_SERVICE) as WifiManager?
-        myWifiManager!!.isWifiEnabled = turnON
+        myWifiManager = getSystemService(WIFI_SERVICE) as? WifiManager
+        @Suppress("DEPRECATION")
+        myWifiManager?.isWifiEnabled = turnON
     }
 
     fun makeLocks() {
-        val wakeLockPM = getSystemService(POWER_SERVICE) as PowerManager
-        myWifiManager = getSystemService(WIFI_SERVICE) as WifiManager?
-        //if (myWakeLock == null)
-        run {
-            myWakeLock = wakeLockPM.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "MyWakelockTag")
-            myWifiLock = myWifiManager!!.createWifiLock(WifiManager.WIFI_MODE_FULL, "MyWifiLockTag")
-            Log.d("NApp::makeLocks","Making wakelock")
-        }
+        val wakeLockPM = getSystemService(POWER_SERVICE) as? PowerManager
+        val wifiMgr = (getSystemService(WIFI_SERVICE) as? WifiManager).also { myWifiManager = it }
+
+        myWakeLock = wakeLockPM?.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "aNaarad3:MyWakelockTag")
+        @Suppress("DEPRECATION")
+        myWifiLock = wifiMgr?.createWifiLock(WifiManager.WIFI_MODE_FULL, "MyWifiLockTag")
+        Log.d("NApp::makeLocks", "Making wakelock")
     }
 
     override fun onCreate() {
         super.onCreate()
 
-        val mgr = getSystemService(WINDOW_SERVICE) as WindowManager
-        metrics = DisplayMetrics()
-        mgr.defaultDisplay.getMetrics(metrics)
+        val mgr = getSystemService(WINDOW_SERVICE) as? WindowManager
+        val displayMetrics = DisplayMetrics()
+        metrics = displayMetrics
+        @Suppress("DEPRECATION")
+        mgr?.defaultDisplay?.getMetrics(displayMetrics)
 
-
-        // Drawable image = getResources().getDrawable(R.drawables.someImage);
-        // float scale = metrics.widthPixels / (float) image.getIntrinsicWidth();
-
-
-        //DisplayMetrics dm = getResources().getDisplayMetrics(); 
-        //densityDpi = dm.densityDpi;
         densityDpi = resources.displayMetrics.density
 
         this.swipeState = true

@@ -36,10 +36,12 @@ import android.view.View.MeasureSpec
 import android.view.View.OnTouchListener
 import android.view.ViewGroup
 import android.view.ViewGroup.MarginLayoutParams
+import android.os.Build
 import android.widget.ImageView
 import android.widget.RelativeLayout
 import android.widget.TextView
 import android.widget.ToggleButton
+import androidx.core.content.res.ResourcesCompat
 import androidx.lifecycle.ViewModelProvider
 import org.json.JSONException
 import org.json.JSONObject
@@ -175,7 +177,12 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
 
             constructor(tv: TextView, text: String?) {
                 thisTV = tv
-                tmp = Html.fromHtml("<p><b>" + text + "</b></p>")
+                @Suppress("DEPRECATION")
+                tmp = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    Html.fromHtml("<p><b>$text</b></p>", Html.FROM_HTML_MODE_LEGACY)
+                } else {
+                    Html.fromHtml("<p><b>$text</b></p>")
+                }
             }
 
             override fun run() {
@@ -207,7 +214,8 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
         imageView?.let { img ->
             val res = mActivity0?.resources ?: activity?.resources
             if (res != null) {
-                val drawable = if (on) res.getDrawable(R.drawable.lamp_off) else res.getDrawable(R.drawable.lamp_on)
+                val drawableId = if (on) R.drawable.lamp_off else R.drawable.lamp_on
+                val drawable = ResourcesCompat.getDrawable(res, drawableId, null)
                 img.setImageDrawable(drawable)
             }
             img.setBackgroundColor(Color.TRANSPARENT)
