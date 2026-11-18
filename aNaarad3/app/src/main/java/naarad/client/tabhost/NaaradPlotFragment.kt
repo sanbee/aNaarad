@@ -444,40 +444,75 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
         }
 
 	// Open a naarad socket
-        private fun openNaaradSocket(host: String, port: Int, client: String=""): Socket? {
+        private fun openNaaradSocket(host: String,
+				     port: Int,
+				     client: String=""): Socket? {
 	    val socket = activeSocket ?:
 		naaradSocket(host, port)?.also { activeSocket = it } ?:
 		run {
-		    Log.d(client, "Error in openNaaradSocket(${NaaradUtils.serverName}, ${NaaradUtils.serverPort})")
+		    Log.d(client,"Error in openNaaradSocket "+
+				     "(${NaaradUtils.serverName}, "+
+				     "${NaaradUtils.serverPort})")
 		    return null
 		}
 	    return socket;
 	}
 
+	//
+	// Send "done" message to the Naarad server.  That closes the
+	// socket on the server side.
+	//
 	private fun finishNaaradProtocol(mySocWriter: PrintWriter)
 	{
             naaradWriter(mySocWriter, "done")
 	}
-
-	// Send "done" message to the Naarad server.  That closes the
-	// socket on the server side.  Close the socket on the client
-	// side as well.
+	//
+	// This is typically called after finishNaaradProtocol() which
+	// closes the socket on the server side.  This closes the
+	// socket on the client side as well.
+	//
 	private fun closeNaaradSocket()
 	{
 	    activeSocket?.close()
 	    activeSocket=null;
 	}
 
-        private fun publishJSON(message: String, force :Boolean=false) {
+	//
+	// Publish the JSON packet array.  This updates the UI (finalizePublishJSON())
+	// once, at the end.
+	//
+        private fun publishJSON(messages: ArrayList<String>, n:Int, force :Boolean=false) {
+	    //var jsonStr: String?=null
+	    for (i in n until messages.size) {
+		//jsonStr=publishJSONEngine(messages[i],force)
+		publishJSON(messages[i],force)
+	    }
+	    //finalizePublishJSON(jsonStr)
+	}
+	//
+	// Publish a single JSON packet
+	//
+	private fun publishJSON(message: String, force :Boolean=false) {
+	    val jsonStr = publishJSONEngine(message,force) ?: null
+	    //finalizePublishJSON(jsonStr)
+	}
+
+	//
+	// JSON publishing engine.  This adds new data for plotting on
+	// the main thread, calls finalizePublishJSON at the end and
+	// returns the published JSON packet.
+	//
+        private fun publishJSONEngine(message: String, force :Boolean=false): String? {
             val jsonStart = message.indexOf('{')
             val jsonEnd = message.lastIndexOf('}')
             if (jsonStart < 0 || jsonEnd <= jsonStart) {
                 Log.d("publishJSON","publishJSON: Error in message" + message)
-                return
+                return null
             }
 
             val jsonStr = message.substring(jsonStart, jsonEnd + 1)
             val json = JSONObject(jsonStr)
+	    var latestJSON: String?=null
             if (json.optInt("rf_fail", 0) == 0) {
                 val nodeid: Int = json.optInt("node_id", 1)
                 var timestamp = json.optDouble("time", System.currentTimeMillis().toDouble())
@@ -500,17 +535,49 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
                 val curX = x0
                 val curY = displayY
 
-                activity?.runOnUiThread {
-                    addNewData(seriesIndex, curX, curY,force)
-                    reDrawThrottled()
+                addNewData(seriesIndex, curX, curY,force)
+		activity?.runOnUiThread {
                     mMainActivityCallback?.onDataArrival(jsonStr)
-                }
+                    reDrawThrottled()
+		}
+		latestJSON=jsonStr
             } else {
                 uiToast("Packet invalid (rf_fail=1)", Gravity.BOTTOM)
-                return
+                //return null
             }
-        }
+	    // finalizePublishJSON(latestJSON)
 
+	    return latestJSON;
+      }
+
+	// private fun finalizePublishJSON(jsonStr: String? = null) {
+	//     // 1. Bail out immediately on the background thread if the Fragment is already detached
+	//     val hostActivity = activity ?: return
+	//     if (!isAdded || view == null) return
+
+	//     hostActivity.runOnUiThread {
+	// 	// 2. Re-check lifecycle inside the lambda because runOnUiThread runs asynchronously later
+	// 	if (!isAdded || view == null) return@runOnUiThread
+
+	// 	if (jsonStr != null) {
+	// 	    mMainActivityCallback?.onDataArrival(jsonStr)
+	// 	}
+	// 	reDrawThrottled()
+	//     }
+	// }
+
+	//
+	// Update the UI for published JSON packets.  Update the
+	// current sensor values (onDataArrival()) and the line chart
+	// in Sensors tab.
+	//
+	private fun finalizePublishJSON(jsonStr: String?=null)
+	{
+            activity?.runOnUiThread {
+                mMainActivityCallback?.onDataArrival(jsonStr)
+                reDrawThrottled()
+            }
+	}
 	//
         // Fetches historical messages and returns an Array of
 	// ArrayList<String> where messages for node keys[i] are
@@ -694,7 +761,6 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
 	    val port = NaaradUtils.serverPort
 
 	    try {
-		//val socket = activeSocket ?: naaradSocket(host, port)?.also { activeSocket = it } ?: return
 		val socket = openNaaradSocket(host,port,"syncData") ?: return
 
 		val messages = naaradGetCurrentDataEngine(keys, socket, publish = false)
@@ -754,9 +820,10 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
 
 				    // Append only points with timestamps later than lastT
 				    if (n != -1) {
-					for (i in n until nodeHistMessages.size) {
-					    publishJSON(nodeHistMessages[i])
-					}
+					publishJSON(nodeHistMessages,n)
+					// for (i in n until nodeHistMessages.size) {
+					//     publishJSON(nodeHistMessages[i])
+					// }
 				    }
 				} else {
 				    // Plot is empty: publish all historical messages for this node

@@ -35,16 +35,19 @@ import android.os.Build
 
 object NaaradUtils {
 
-    const val DEFAULT_PORT = 1234
-    const val DEFAULT_SERVER = "192.168.0.126"
-
+    const val DEFAULT_PORT            = 1234
+    const val DEFAULT_SERVER          = "192.168.0.126"
+    const val DEFAULT_PLOTTIMERANGE   = "2d"
+    const val DEFAULT_RESYNCTIMESCALE = "30m"
+    const val DEFAULT_PINGTIMEOUT     = "1m"
+    
     var prefs: SharedPreferences? = null
     var nodeID2Ndx: java.util.HashMap<Int?, Int?>? = null
 
     // Default time range of 30 min (in seconds)
     var livePlotReSyncTimescale: Double = currentPlotReSyncTimescale // To be used in loops
     var currentPlotReSyncTimescaleStr: String
-        get() = getPreference("reSyncTimescale", "30m")
+        get() = getPreference("reSyncTimescale", DEFAULT_RESYNCTIMESCALE)
         set(value) {
             setPreference("reSyncTimescale", value)
             livePlotReSyncTimescale = parseHmsToSeconds(value)
@@ -58,7 +61,7 @@ object NaaradUtils {
     // Default time range of 2 days (in seconds)
     var livePlotTimerange: Double = currentPlotTimerange // To be used in loops
     var currentPlotTimerangeStr: String
-        get() = getPreference("plotTimerange", "2d")
+        get() = getPreference("plotTimerange", DEFAULT_PLOTTIMERANGE)
         set(value) {
             setPreference("plotTimerange", value)
             livePlotTimerange = parseHmsToSeconds(value)
@@ -75,7 +78,7 @@ object NaaradUtils {
     // the new value.
     var livePingTimeout: Double = currentPingTimeout // To be used in loops
     var currentPingTimeoutStr: String
-        get() = getPreference("pingTimeout", "1m")
+        get() = getPreference("pingTimeout", DEFAULT_PINGTIMEOUT)
         set(value) {
             val oldVal = livePingTimeout
             setPreference("pingTimeout", value)
@@ -452,7 +455,6 @@ object NaaradUtils {
             throw IOException(errMsg, e)
         }
     }
-
 
     //
     //---------------------------------------------------------------------------------------------
