@@ -512,7 +512,7 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
 
             val jsonStr = message.substring(jsonStart, jsonEnd + 1)
             val json = JSONObject(jsonStr)
-	    var latestJSON: String?=null
+	    var validJSON: String?=null
             if (json.optInt("rf_fail", 0) == 0) {
                 val nodeid: Int = json.optInt("node_id", 1)
                 var timestamp = json.optDouble("time", System.currentTimeMillis().toDouble())
@@ -523,7 +523,8 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
                 y0 = json.optDouble("degc", 0.0)
 
                 val map: HashMap<Int?, Int?> = NaaradUtils.nodeID2NdxMap
-                val seriesIndex: Int = map[nodeid] ?: 0
+                val dataSetCount = mLineChart?.data?.dataSetCount ?: 1
+                val seriesIndex: Int = (map[nodeid] ?: 0).coerceIn(0, (dataSetCount - 1).coerceAtLeast(0))
 
                 val plotUnit = getPreference("plotUnit", "C") ?: "C"
                 val displayY = if (plotUnit == "F") {
@@ -535,19 +536,19 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
                 val curX = x0
                 val curY = displayY
 
-                addNewData(seriesIndex, curX, curY,force)
 		activity?.runOnUiThread {
+                    addNewData(seriesIndex, curX, curY, force)
                     mMainActivityCallback?.onDataArrival(jsonStr)
                     reDrawThrottled()
 		}
-		latestJSON=jsonStr
+		validJSON = jsonStr
             } else {
                 uiToast("Packet invalid (rf_fail=1)", Gravity.BOTTOM)
                 //return null
             }
 	    // finalizePublishJSON(latestJSON)
 
-	    return latestJSON;
+	    return validJSON;
       }
 
 	// private fun finalizePublishJSON(jsonStr: String? = null) {
@@ -602,7 +603,7 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
             for (i in keys.indices) {
                 if (allDone || isCancelled) break
                 val nodeid = keys[i]
-                val seriesIndex = map[nodeid] ?: i
+                val seriesIndex = (map[nodeid] ?: i).coerceIn(0, messagesArray.size - 1)
                 val msg = "gethpkt $nodeid"
                 Log.d("naaradGetDataHistoryEngine", "=== Requesting Historical Data for Sensor Node ===" + msg)
                 naaradWriter(mySocWriter, msg)
@@ -805,7 +806,7 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
 			// 2. Process historical data for each node: append only points with timestamps > lastT
 			for (nodeid in keys) {
 			    val sIndex = map[nodeid] ?: 0
-			    val nodeHistMessages = if (sIndex < hmessages.size) hmessages[sIndex] else ArrayList()
+			    val nodeHistMessages = hmessages.getOrNull(sIndex) ?: ArrayList()
 			    val nodeDataSet = mLineChart?.data?.getDataSetByIndex(sIndex) as? LineDataSet
 
 			    if (nodeHistMessages.isNotEmpty()) {

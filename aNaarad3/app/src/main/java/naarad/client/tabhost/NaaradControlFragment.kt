@@ -55,7 +55,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-const val SENSOR_VALUE_COLOR = "black"
+const val SENSOR_VALUE_COLOR = "blue"
 const val SENSOR_VALUE_FONT_SIZE = 11f
 
 //public class NaaradControlFragment extends Fragment implements View.OnLongClickListener 
@@ -190,6 +190,8 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
 
             override fun run() {
                 thisTV.text = tmp
+                thisTV.gravity = Gravity.CENTER
+                thisTV.setPadding(0, 0, 0, 6)
                 thisTV.setTextSize(TypedValue.COMPLEX_UNIT_DIP, SENSOR_VALUE_FONT_SIZE)
                 thisTV.setTextColor(Color.parseColor(SENSOR_VALUE_COLOR))
                 thisTV.background?.alpha = 255
