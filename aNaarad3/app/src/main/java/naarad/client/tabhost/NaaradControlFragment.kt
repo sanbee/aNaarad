@@ -55,6 +55,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+const val SENSOR_VALUE_COLOR = "black"
+const val SENSOR_VALUE_FONT_SIZE = 11f
+
 //public class NaaradControlFragment extends Fragment implements View.OnLongClickListener 
 class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListener
 {
@@ -187,8 +190,8 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
 
             override fun run() {
                 thisTV.text = tmp
-                thisTV.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12f)
-                thisTV.setTextColor(Color.parseColor("white"))
+                thisTV.setTextSize(TypedValue.COMPLEX_UNIT_DIP, SENSOR_VALUE_FONT_SIZE)
+                thisTV.setTextColor(Color.parseColor(SENSOR_VALUE_COLOR))
                 thisTV.background?.alpha = 255
             }
         }
@@ -476,11 +479,11 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
             val tv = tempBubbleArr[i] ?: continue
             val nodeid = keys[i]
             val savedUnit = getPreference("bubbleUnit$nodeid", "C") ?: "C"
-            tv.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12f)
+            tv.setTextSize(TypedValue.COMPLEX_UNIT_DIP, SENSOR_VALUE_FONT_SIZE)
             tv.setTag(R.integer.key1, savedUnit)
             tv.setTag(R.integer.key0, 20.0f)
             tv.tag = nodeid
-            tv.setTextColor(Color.parseColor("white"))
+            tv.setTextColor(Color.parseColor(SENSOR_VALUE_COLOR))
         }
 
 
