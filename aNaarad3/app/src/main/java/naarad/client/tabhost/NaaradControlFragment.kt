@@ -586,23 +586,31 @@ class NaaradControlFragment : NaaradAbstractFragment() //implements OnTouchListe
         gDnDParams?.moveView(v, x, y, w, h, 1.0f, 1.0f)
     }
 
-    fun saveSingleViewPosition(v: View, x: Int, y: Int) {
+    fun saveSingleViewPosition(v: View, rawX: Int, rawY: Int) {
         val oY = myApp?.dpToPixel(20) ?: 20
         val oX = oY
         val textOffset = myApp?.dpToPixel(5) ?: 5
         for (i in bulbArr.indices) {
-            if (bulbArr[i] == v || bulbTextArr[i] == v) {
-                setPreference("bulbX$i", x)
-                setPreference("bulbY$i", y)
-                bulbArr[i]?.let { gDnDParams?.moveView(it, x, y, oX, oY, 1.0f, 1.0f) }
-                bulbTextArr[i]?.let { gDnDParams?.moveView(it, x + textOffset, y + textOffset, oX, oY, 1.0f, 1.0f) }
+            if (bulbArr[i] == v) {
+                setPreference("bulbX$i", rawX)
+                setPreference("bulbY$i", rawY)
+                bulbArr[i]?.let { gDnDParams?.moveView(it, rawX, rawY, oX, oY, 1.0f, 1.0f) }
+                bulbTextArr[i]?.let { gDnDParams?.moveView(it, rawX + textOffset, rawY + textOffset, oX, oY, 1.0f, 1.0f) }
+                return
+            } else if (bulbTextArr[i] == v) {
+                val bulbX = rawX - textOffset
+                val bulbY = rawY - textOffset
+                setPreference("bulbX$i", bulbX)
+                setPreference("bulbY$i", bulbY)
+                bulbArr[i]?.let { gDnDParams?.moveView(it, bulbX, bulbY, oX, oY, 1.0f, 1.0f) }
+                bulbTextArr[i]?.let { gDnDParams?.moveView(it, rawX, rawY, oX, oY, 1.0f, 1.0f) }
                 return
             }
         }
         for (i in tempBubbleArr.indices) {
             if (tempBubbleArr[i] == v) {
-                setPreference("bubbleX$i", x)
-                setPreference("bubbleY$i", y)
+                setPreference("bubbleX$i", rawX)
+                setPreference("bubbleY$i", rawY)
                 return
             }
         }

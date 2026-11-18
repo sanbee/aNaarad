@@ -43,6 +43,7 @@ class NaaradDnDOnTouchListener(//private View selected_item=null;
     sizeXDP: Int, sizeYDP: Int
 ) : OnTouchListener {
     var myApp: NaaradApp
+    private var hasDragged = false
 
     private val myWidthFudgeFactor: Float
     private val myHeightFudgeFactor: Float
@@ -65,6 +66,10 @@ class NaaradDnDOnTouchListener(//private View selected_item=null;
         val deltaX = (event.rawX - gDnDParams.raw_touch_x0).toInt()
         val deltaY = (event.rawY - gDnDParams.raw_touch_y0).toInt()
 
+        if (Math.abs(deltaX) > 2 || Math.abs(deltaY) > 2) {
+            hasDragged = true
+        }
+
         val x = gDnDParams.initial_left + deltaX
         val y = gDnDParams.initial_top + deltaY
 
@@ -86,18 +91,12 @@ class NaaradDnDOnTouchListener(//private View selected_item=null;
         var ret = true
         val act = event.actionMasked
 
+        if (act == MotionEvent.ACTION_DOWN) {
+            hasDragged = false
+        }
+
         if (act != MotionEvent.ACTION_MOVE) gGestureDetector.onTouchEvent(event)
 
-        // This handler sets up the global variable selected_item
-        // to point to the view on which the events were detected.
-        //
-        // The MOVE event transfers control to containerOnTouch
-        // which has the code to actually moving the icons.  The
-        // UP event essentially finishes the MOVE event, setting
-        // the global variables (toughFlag_p and selected_item),
-        // resetting the background of the icon on the screen and
-        // re-enabling the swiping of the TabHost Fragments).
-        //selected_item = v;
         gDnDParams.selected_item = v
 
         when (act) {
@@ -107,8 +106,9 @@ class NaaradDnDOnTouchListener(//private View selected_item=null;
             }
 
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                val wasDragging = gDnDParams.touchFlag_p
+                val wasDragging = gDnDParams.touchFlag_p && hasDragged
                 gDnDParams.touchFlag_p = false
+                hasDragged = false
                 v.parent?.requestDisallowInterceptTouchEvent(false)
 
                 if (v is ImageView) {
@@ -125,13 +125,12 @@ class NaaradDnDOnTouchListener(//private View selected_item=null;
                     if (tag >= 0) fragment?.resetBulbHighlight(tag)
                     if (wasDragging) {
                         val lp = v.layoutParams as? android.view.ViewGroup.MarginLayoutParams
-                        val left = lp?.leftMargin ?: v.left
-                        val top = lp?.topMargin ?: v.top
+                        val left = if (lp != null && lp.leftMargin > 0) lp.leftMargin else v.left
+                        val top = if (lp != null && lp.topMargin > 0) lp.topMargin else v.top
                         fragment?.saveSingleViewPosition(v, left, top)
                     }
                 }
 
-                //Log.d("NDnDOTL::onTouchListener_p","Drop pos.: $left $top")
                 myApp.swipeState = true
             }
         }
