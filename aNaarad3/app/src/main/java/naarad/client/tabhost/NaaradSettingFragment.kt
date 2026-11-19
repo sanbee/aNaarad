@@ -17,117 +17,119 @@
 
 package naarad.client.tabhost
 
-import android.content.Context
-import android.content.IntentFilter
-import android.graphics.Color
 import android.os.Bundle
-import android.text.Editable
-import android.text.TextWatcher
 import android.view.Gravity
-import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.view.inputmethod.EditorInfo
-import android.view.inputmethod.InputMethodManager
-import android.widget.Button
-import android.widget.CheckBox
-import android.widget.EditText
-import android.widget.Toast
-import com.sanbee.anaarad.R
-import java.io.PrintWriter
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
+import naarad.client.tabhost.theme.NaaradTheme
 
 class NaaradSettingFragment : NaaradAbstractFragment() {
-    private val printwriter: PrintWriter? = null
-    private var serverNameField: EditText? = null
-    private var serverPortField: EditText? = null
-    private var pingTimeoutField: EditText? = null
-    private var plotTimerangeField: EditText? = null
-    private var reSyncTimescaleField: EditText? = null
-    private var setButton: Button? = null
-    private var wakeButton: CheckBox? = null
-    private var wifiControl: CheckBox? = null
     var myApp: NaaradApp? = null
-
-    private val message: String? = null
     private var wifiTurnedOnByMe = false
-    private var gWifiControl = 0
-    private var gWakeLockControl = 0
-    private var gServerPort = 0
-    private var gServerName: String? = null
 
-    private fun saveSettingsFromFields() {
-        val name = serverNameField?.text?.toString()?.trim()
-        if (!name.isNullOrEmpty()) {
-            gServerName = name
-//            serverName = name
-        }
-        val portStr = serverPortField?.text?.toString()?.trim()
-        try {
-            val port = portStr?.toInt() ?: NaaradUtils.serverPort
-            if (port > 0) {
-                gServerPort = port
-//                serverPort = port
+    private fun handleWifiControl(isChecked: Boolean) {
+        if (isChecked) {
+            if (!isWifiConnected) {
+                wifiTurnedOnByMe = true
+                myApp?.setWifiState(true)
+                toast("Turning wifi on...", Gravity.BOTTOM)
             }
-        } catch (nfe: NumberFormatException) {
-            // keep existing port
+            setPreference("wifiControl", 1)
+        } else {
+            if (isWifiConnected && wifiTurnedOnByMe) {
+                myApp?.setWifiState(false)
+            }
+            toast("Turning wifi off...", Gravity.BOTTOM)
+            setPreference("wifiControl", 0)
         }
-        validateAndUpdatePingTimeout()
-        validateAndUpdatePlotTimerange()
-        validateAndUpdateReSyncTimescale()
     }
 
-    private fun hideKeyboard(v: View) {
-        val imm = activity?.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
-        imm?.hideSoftInputFromWindow(v.windowToken, 0)
-    }
-
-    private fun validateAndUpdatePingTimeout() {
-        val inputStr = pingTimeoutField?.text?.toString()?.trim() ?: ""
-        val secVal = NaaradUtils.parseHmsToSeconds(inputStr)
-        if (secVal > 0.0) {
-            val oldVal = NaaradUtils.currentPingTimeout
-            NaaradUtils.currentPingTimeoutStr = inputStr
-            pingTimeoutField?.setText(inputStr)
-            if (oldVal != secVal) {
-                toast("Setting saved: Ping timeout = $inputStr (${secVal}s)", Gravity.BOTTOM)
+    private fun handleWakeLock(isChecked: Boolean) {
+        if (isWifiConnected) {
+            if (isChecked) {
+                if (myApp?.myWakeLock?.isHeld == false) myApp?.myWakeLock?.acquire()
+                if (myApp?.myWifiLock?.isHeld == false) myApp?.myWifiLock?.acquire()
+                toast("Wake and Wifi locks set.", Gravity.BOTTOM)
+                setPreference("wakeControl", 1)
+            } else {
+                if (myApp?.myWakeLock?.isHeld == true) myApp?.myWakeLock?.release()
+                if (myApp?.myWifiLock?.isHeld == true) myApp?.myWifiLock?.release()
+                setPreference("wakeControl", 0)
             }
         } else {
-            val lastValidStr = NaaradUtils.currentPingTimeoutStr
-            pingTimeoutField?.setText(lastValidStr)
+            setPreference("wakeControl", 0)
+            toast("Wifi not connected.\nWake and Wifi locks not set.", Gravity.BOTTOM)
         }
     }
 
-    private fun validateAndUpdatePlotTimerange() {
-        val inputStr = plotTimerangeField?.text?.toString()?.trim() ?: ""
-        val secVal = NaaradUtils.parseHmsToSeconds(inputStr)
-        if (secVal > 0.0) {
-            val oldVal = NaaradUtils.currentPlotTimerange
-            NaaradUtils.currentPlotTimerangeStr = inputStr
-            plotTimerangeField?.setText(inputStr)
-            if (oldVal != secVal) {
-                toast("Setting saved: Plot timerange = $inputStr (${secVal}s)", Gravity.BOTTOM)
-            }
-        } else {
-            val lastValidStr = NaaradUtils.currentPlotTimerangeStr
-            plotTimerangeField?.setText(lastValidStr)
+    private fun saveSettings(
+        name: String,
+        portStr: String,
+        pingTO: String,
+        plotRange: String,
+        reSyncScale: String,
+        wifiOn: Boolean,
+        wakeOn: Boolean
+    ) {
+        val trimmedName = name.trim()
+        if (trimmedName.isNotEmpty()) {
+            NaaradUtils.serverName = trimmedName
         }
-    }
 
-    private fun validateAndUpdateReSyncTimescale() {
-        val inputStr = reSyncTimescaleField?.text?.toString()?.trim() ?: ""
-        val secVal = NaaradUtils.parseHmsToSeconds(inputStr)
-        if (secVal > 0.0) {
-            val oldVal = NaaradUtils.currentPlotReSyncTimescale
-            NaaradUtils.currentPlotReSyncTimescaleStr = inputStr
-            reSyncTimescaleField?.setText(inputStr)
-            if (oldVal != secVal) {
-                toast("Setting saved: ReSync timescale = $inputStr (${secVal}s)", Gravity.BOTTOM)
-            }
-        } else {
-            val lastValidStr = NaaradUtils.currentPlotReSyncTimescaleStr
-            reSyncTimescaleField?.setText(lastValidStr)
+        val port = portStr.trim().toIntOrNull() ?: NaaradUtils.serverPort
+        if (port > 0) {
+            NaaradUtils.serverPort = port
         }
+
+        val secPing = NaaradUtils.parseHmsToSeconds(pingTO)
+        if (secPing > 0.0) {
+            NaaradUtils.currentPingTimeoutStr = pingTO
+        }
+
+        val secRange = NaaradUtils.parseHmsToSeconds(plotRange)
+        if (secRange > 0.0) {
+            NaaradUtils.currentPlotTimerangeStr = plotRange
+        }
+
+        val secScale = NaaradUtils.parseHmsToSeconds(reSyncScale)
+        if (secScale > 0.0) {
+            NaaradUtils.currentPlotReSyncTimescaleStr = reSyncScale
+        }
+
+        handleWifiControl(wifiOn)
+        handleWakeLock(wakeOn)
+
+        toast("Settings saved: ${NaaradUtils.serverName}:${NaaradUtils.serverPort}", Gravity.BOTTOM)
     }
 
     override fun onPause() {
@@ -143,231 +145,199 @@ class NaaradSettingFragment : NaaradAbstractFragment() {
         }
         if (giveMsg) toast("Wake and Wifi locks released.", Gravity.BOTTOM)
 
-        setPreference("wifiControl", gWifiControl)
-        setPreference("wakeControl", gWakeLockControl)
         if (wifiTurnedOnByMe) {
             myApp?.setWifiState(false)
             toast("Turning off wifi...", Gravity.BOTTOM)
         }
     }
 
-    fun wifiControlClick(v: CheckBox) {
-        if (v.isChecked) {
-            if (!isWifiConnected) {
-                wifiTurnedOnByMe = true
-                myApp?.setWifiState(true)
-
-                toast("Turning wifi on...", Gravity.BOTTOM)
-
-                val nWifiReceiver = NaaradWifiBroadcastReceiver()
-
-                val filters = IntentFilter()
-                filters.addAction("android.net.wifi.WIFI_STATE_CHANGED")
-            }
-            gWifiControl = 1
-        } else {
-            if (isWifiConnected && wifiTurnedOnByMe) myApp?.setWifiState(false)
-            toast("Turning wifi off...", Gravity.BOTTOM)
-            gWifiControl = 0
-        }
-    }
-
-    fun wakeLockClick(v: CheckBox) {
-        if (isWifiConnected) {
-            if (v.isChecked) {
-                if (myApp?.myWakeLock?.isHeld == false) myApp?.myWakeLock?.acquire()
-                if (myApp?.myWifiLock?.isHeld == false) myApp?.myWifiLock?.acquire()
-                toast("Wake and Wifi locks set.", Gravity.BOTTOM)
-                gWakeLockControl = 1
-            } else {
-                if (myApp?.myWakeLock?.isHeld == true) myApp?.myWakeLock?.release()
-                if (myApp?.myWifiLock?.isHeld == true) myApp?.myWifiLock?.release()
-                gWakeLockControl = 0
-            }
-        } else {
-            v.isChecked = false
-            gWakeLockControl = 0
-            toast("Wifi not connected.\nWake and Wifi locks not set.", Gravity.BOTTOM)
-        }
-    }
-
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View? {
-        setRetainInstance(true)
-        myApp = requireActivity().application as NaaradApp
+    ): View {
+        myApp = requireActivity().application as? NaaradApp
         myApp?.makeLocks()
 
-        if (mView == null) mView = inflater.inflate(
-            R.layout.activity_naarad_setting,
-            container, false
-        )?.apply { isFocusableInTouchMode = true }
-        else (mView?.parent as? ViewGroup)?.removeView(mView)
-
-        serverNameField =
-            mView?.findViewById<View?>(R.id.serverName) as? EditText
-        serverPortField =
-            mView?.findViewById<View?>(R.id.serverPort) as? EditText
-
-        // Pre-populate fields with remembered serverName and serverPort
-        val savedServerName = NaaradUtils.serverName// ?: defaultServer
-        val savedServerPort = NaaradUtils.serverPort
-
-        gServerName = savedServerName
-        gServerPort = savedServerPort
-
-        serverNameField?.setText(savedServerName)
-        serverPortField?.setText(savedServerPort.toString())
-
-        // Save immediately as user types
-        serverNameField?.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-            override fun afterTextChanged(s: Editable?) {
-                val name = s?.toString()?.trim()
-                if (!name.isNullOrEmpty()) {
-                    gServerName = name
-                    //serverName = name
+        return ComposeView(requireContext()).apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            setContent {
+                NaaradTheme {
+                    SettingsScreen(
+                        initialServerName = NaaradUtils.serverName,
+                        initialServerPort = NaaradUtils.serverPort.toString(),
+                        initialPingTimeout = NaaradUtils.currentPingTimeoutStr,
+                        initialPlotTimerange = NaaradUtils.currentPlotTimerangeStr,
+                        initialReSyncTimescale = NaaradUtils.currentPlotReSyncTimescaleStr,
+                        initialWifiControl = getPreference("wifiControl", 0) == 1,
+                        initialWakeControl = getPreference("wakeControl", 0) == 1,
+                        onSaveSettings = { name, portStr, pingTO, plotRange, reSyncScale, wifiOn, wakeOn ->
+                            saveSettings(name, portStr, pingTO, plotRange, reSyncScale, wifiOn, wakeOn)
+                        }
+                    )
                 }
             }
-        })
-
-        serverPortField?.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-            override fun afterTextChanged(s: Editable?) {
-                try {
-                    val port = s?.toString()?.trim()?.toInt() ?: NaaradUtils.serverPort
-                    if (port > 0) {
-                        gServerPort = port
-                        //serverPort = port
-                        setButton?.setTextColor(Color.GREEN)
-                    }
-                } catch (e: NumberFormatException) {
-                    setButton?.setTextColor(Color.RED)
-                }
-            }
-        })
-
-        val pingId = resources.getIdentifier("pingTimeout", "id", requireContext().packageName)
-        if (pingId != 0) {
-            pingTimeoutField = mView?.findViewById(pingId)
         }
-        pingTimeoutField?.setText(NaaradUtils.currentPingTimeoutStr)
-
-        pingTimeoutField?.setOnEditorActionListener { v, actionId, event ->
-            if (actionId == EditorInfo.IME_ACTION_DONE || actionId == EditorInfo.IME_ACTION_NEXT ||
-                (event != null && event.keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_DOWN)
-            ) {
-                validateAndUpdatePingTimeout()
-                hideKeyboard(v)
-                mView?.requestFocus()
-                true
-            } else {
-                false
-            }
-        }
-
-        pingTimeoutField?.setOnFocusChangeListener { _, hasFocus ->
-            if (!hasFocus) {
-                validateAndUpdatePingTimeout()
-            }
-        }
-
-        val plotRangeId = resources.getIdentifier("plotTimerange", "id", requireContext().packageName)
-        if (plotRangeId != 0) {
-            plotTimerangeField = mView?.findViewById(plotRangeId)
-        }
-        plotTimerangeField?.setText(NaaradUtils.currentPlotTimerangeStr)
-
-        plotTimerangeField?.setOnEditorActionListener { v, actionId, event ->
-            if (actionId == EditorInfo.IME_ACTION_DONE || actionId == EditorInfo.IME_ACTION_NEXT ||
-                (event != null && event.keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_DOWN)
-            ) {
-                validateAndUpdatePlotTimerange()
-                hideKeyboard(v)
-                mView?.requestFocus()
-                true
-            } else {
-                false
-            }
-        }
-
-        plotTimerangeField?.setOnFocusChangeListener { _, hasFocus ->
-            if (!hasFocus) {
-                validateAndUpdatePlotTimerange()
-            }
-        }
-
-        val reSyncId = resources.getIdentifier("reSyncTimescale", "id", requireContext().packageName)
-        if (reSyncId != 0) {
-            reSyncTimescaleField = mView?.findViewById(reSyncId)
-        }
-        reSyncTimescaleField?.setText(NaaradUtils.currentPlotReSyncTimescaleStr)
-
-        reSyncTimescaleField?.setOnEditorActionListener { v, actionId, event ->
-            if (actionId == EditorInfo.IME_ACTION_DONE || actionId == EditorInfo.IME_ACTION_NEXT ||
-                (event != null && event.keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_DOWN)
-            ) {
-                validateAndUpdateReSyncTimescale()
-                hideKeyboard(v)
-                mView?.requestFocus()
-                true
-            } else {
-                false
-            }
-        }
-
-        reSyncTimescaleField?.setOnFocusChangeListener { _, hasFocus ->
-            if (!hasFocus) {
-                validateAndUpdateReSyncTimescale()
-            }
-        }
-
-        setButton =
-            mView?.findViewById<View?>(R.id.setButton) as? Button
-
-        wifiControl = mView?.findViewById<View?>(R.id.wifiControl) as? CheckBox
-        wakeButton = mView?.findViewById<View?>(R.id.wake) as? CheckBox
-        wakeButton?.isChecked = false
-
-        if ((getPreference("wifiControl", 0).also { gWifiControl = it }) == 1) {
-            wifiControl?.isChecked = true
-            wifiControl?.let { wifiControlClick(it) }
-        }
-        wifiControl?.setOnClickListener {
-            (it as? CheckBox)?.let { cb -> wifiControlClick(cb) }
-        }
-
-        if ((getPreference("wakeControl", 0).also { gWakeLockControl = it }) == 1) {
-            wakeButton?.isChecked = true
-            wakeButton?.let { wakeLockClick(it) }
-        }
-
-        wakeButton?.setOnClickListener {
-            (it as? CheckBox)?.let { cb -> wakeLockClick(cb) }
-        }
-
-        setButton?.setOnClickListener {
-            saveSettingsFromFields()
-            setButton?.setTextColor(Color.GREEN)
-            toast("Settings saved: $gServerName:$gServerPort", Gravity.BOTTOM)
-        }
-        return mView
     }
 
     companion object {
-        private var mView: View? = null
-
         fun newInstanceNSF(sampleText: String?): NaaradSettingFragment {
             val f = NaaradSettingFragment()
-
             val b = Bundle()
             b.putString("bString", sampleText)
             f.arguments = b
-
             return f
+        }
+    }
+}
+
+@Composable
+fun SettingsScreen(
+    initialServerName: String,
+    initialServerPort: String,
+    initialPingTimeout: String,
+    initialPlotTimerange: String,
+    initialReSyncTimescale: String,
+    initialWifiControl: Boolean,
+    initialWakeControl: Boolean,
+    onSaveSettings: (String, String, String, String, String, Boolean, Boolean) -> Unit
+) {
+    var serverName by remember { mutableStateOf(initialServerName) }
+    var serverPort by remember { mutableStateOf(initialServerPort) }
+    var pingTimeout by remember { mutableStateOf(initialPingTimeout) }
+    var plotTimerange by remember { mutableStateOf(initialPlotTimerange) }
+    var reSyncTimescale by remember { mutableStateOf(initialReSyncTimescale) }
+    var wifiControl by remember { mutableStateOf(initialWifiControl) }
+    var wakeControl by remember { mutableStateOf(initialWakeControl) }
+
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text(
+                text = "Naarad Settings",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                OutlinedTextField(
+                    value = serverName,
+                    onValueChange = { serverName = it },
+                    label = { Text("Server IP") },
+                    modifier = Modifier.weight(1f),
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = serverPort,
+                    onValueChange = { serverPort = it },
+                    label = { Text("Port") },
+                    modifier = Modifier.weight(0.6f),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                )
+                Button(
+                    onClick = {
+                        onSaveSettings(
+                            serverName,
+                            serverPort,
+                            pingTimeout,
+                            plotTimerange,
+                            reSyncTimescale,
+                            wifiControl,
+                            wakeControl
+                        )
+                    }
+                ) {
+                    Text("Set")
+                }
+            }
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Checkbox(
+                    checked = wifiControl,
+                    onCheckedChange = { wifiControl = it }
+                )
+                Text(
+                    text = "Turn wifi on/off?",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+            }
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Checkbox(
+                    checked = wakeControl,
+                    onCheckedChange = { wakeControl = it }
+                )
+                Text(
+                    text = "Keep CPU + WiFi on in the background?",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+            }
+
+            OutlinedTextField(
+                value = pingTimeout,
+                onValueChange = { newValue ->
+                    pingTimeout = newValue
+                    val sec = NaaradUtils.parseHmsToSeconds(newValue)
+                    if (sec > 0.0) {
+                        NaaradUtils.currentPingTimeoutStr = newValue
+                    }
+                },
+                label = { Text("Ping Timeout (e.g. 1m, 30s)") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done)
+            )
+
+            OutlinedTextField(
+                value = plotTimerange,
+                onValueChange = { newValue ->
+                    plotTimerange = newValue
+                    val sec = NaaradUtils.parseHmsToSeconds(newValue)
+                    if (sec > 0.0) {
+                        NaaradUtils.currentPlotTimerangeStr = newValue
+                    }
+                },
+                label = { Text("Plot Timerange (e.g. 2d, 12h)") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done)
+            )
+
+            OutlinedTextField(
+                value = reSyncTimescale,
+                onValueChange = { newValue ->
+                    reSyncTimescale = newValue
+                    val sec = NaaradUtils.parseHmsToSeconds(newValue)
+                    if (sec > 0.0) {
+                        NaaradUtils.currentPlotReSyncTimescaleStr = newValue
+                    }
+                },
+                label = { Text("ReSync Timescale (e.g. 30m, 1h)") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done)
+            )
         }
     }
 }
