@@ -55,7 +55,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-const val SENSOR_VALUE_COLOR = "blue"
+const val SENSOR_VALUE_COLOR = "black"
 const val SENSOR_VALUE_FONT_SIZE = 11f
 
 //public class NaaradControlFragment extends Fragment implements View.OnLongClickListener 

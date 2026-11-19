@@ -58,6 +58,9 @@ import java.util.HashMap
 import java.util.Locale
 import kotlin.math.roundToLong
 
+import kotlin.math.abs
+import kotlin.math.round
+
 class VerticalTitleLineChart @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
@@ -309,17 +312,28 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
     //
     // This is ~zero overhead if called with valid chart and data.
     //
+    // DISABLED Refreshplot() With It Functionality Incorporated In Redrawthrottled()
     fun refreshPlot(x: Double, chart: LineChart? = null, data: LineData? = null) {
-	val mychart = chart ?: mLineChart ?: return
-	val mydata = data ?: mychart.data ?: return
+	return
+	// val mychart = chart ?: mLineChart ?: return
+	// val mydata = data ?: mychart.data ?: return
 
-	mydata.notifyDataChanged()
-	mychart.notifyDataSetChanged()
+	// mydata.notifyDataChanged()
+	// mychart.notifyDataSetChanged()
 
-	// Scroll the viewport to the new point on the right
-	mychart.moveViewToX(x.toFloat())
+	// // Scroll the viewport to the new point on the right
+	// mychart.moveViewToX(x.toFloat())
     }
 
+    // When building the chart the first time:
+    //   dataSet.addEntry(Entry(x.toFloat(), y.toFloat()))
+    //   chart.notifyDataSetChanged()
+    //
+    // For appending data to existing plot:
+    //   dataSet.addEntry(Entry(x.toFloat(), y.toFloat()),index)
+    // if (dataRemoved)
+    //   chart.notifyDataSetChanged()
+    //
     fun addNewData(seriesIndex: Int, x: Double, y: Double,force: Boolean=false) {
         val chart = mLineChart ?: return
         val data = chart.data ?: return
@@ -330,8 +344,9 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
             val lastEntry = dataSet.getEntryForIndex(entryCount - 1)
             // If the sensor value did not change don't make a new entry
             //if ((y.toFloat() == lastEntry.y) && ((x.toFloat() - lastEntry.y)/1000F < NaaradUtils.NEW_PLOT_DATA_TIMESCALE))
-            if ((y.toFloat() == lastEntry.y) && !force)
-                return
+
+            if ((y.toFloat() == lastEntry.y) && !force) return
+            // if (abs(y.toFloat() - lastEntry.y) < 0.1 && !force) return
         }
 
         // 1. Add the new data point
@@ -349,7 +364,7 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
             }
         }
 
-	refreshPlot(x, chart, data)
+	//refreshPlot(x, chart, data)
     }
 
     fun abortSleeperForTimeoutChange() {
@@ -544,7 +559,7 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
 		validJSON = jsonStr
             } else {
                 uiToast("Packet invalid (rf_fail=1)", Gravity.BOTTOM)
-                //return null
+                return jsonStr
             }
 	    // finalizePublishJSON(latestJSON)
 
@@ -916,18 +931,29 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
 
         @Volatile private var lastRedrawTime = 0L
 
-        protected fun reDrawThrottled() {
-            if (doReDraw && mLineChart != null && !stopRecording) {
-                val now = SystemClock.uptimeMillis()
-                if (now - lastRedrawTime >= 100L) {
-                    lastRedrawTime = now
-                    mLineChart?.data?.notifyDataChanged()
-                    mLineChart?.notifyDataSetChanged()
-                    mLineChart?.invalidate()
-                }
-            }
-        }
-
+    // When building the chart the first time:
+    //   dataSet.addEntry(Entry(x.toFloat(), y.toFloat()))
+    //   chart.notifyDataSetChanged()
+    //
+    // For appending data to existing plot:
+    //   dataSet.addEntry(Entry(x.toFloat(), y.toFloat()),index)
+    // if (dataRemoved)
+    //   chart.notifyDataSetChanged()
+    //
+	protected fun reDrawThrottled() {
+	    if (doReDraw && mLineChart != null && !stopRecording) {
+		val now = SystemClock.uptimeMillis()
+//		if (now - lastRedrawTime >= 100L) {
+		    lastRedrawTime = now
+		    val chartData = mLineChart?.data ?: return
+		    chartData.notifyDataChanged() // Needed only when data is removed
+		    mLineChart?.notifyDataSetChanged()
+		    mLineChart?.moveViewToX(chartData.xMax) // Scrolls to latest point
+		    //mLineChart?.invalidate()
+//		}
+	    }
+	}
+	
         protected fun reDrawForce() {
             if (doReDraw && mLineChart != null && !stopRecording) {
                 mLineChart?.data?.notifyDataChanged()
