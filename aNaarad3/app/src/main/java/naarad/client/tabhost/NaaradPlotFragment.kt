@@ -17,7 +17,10 @@
 
 package naarad.client.tabhost
 
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.content.res.Configuration
 import android.graphics.Canvas
 import android.graphics.Color
@@ -404,6 +407,39 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
 
     fun stopDataSource() {
         mSensorDataSource?.finish()
+    }
+
+    private val screenWakeReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            val action = intent?.action
+            if (action == Intent.ACTION_SCREEN_ON || action == Intent.ACTION_USER_PRESENT) {
+                Log.d("NPF::ScreenWake", "Device woke up ($action) - resetting sleeper")
+                mSensorDataSource?.let { ds ->
+                    ds.sleeper.reset()
+                    ds.abortSleeper()
+                }
+            }
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        val filter = IntentFilter().apply {
+            addAction(Intent.ACTION_SCREEN_ON)
+            addAction(Intent.ACTION_USER_PRESENT)
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            requireContext().registerReceiver(screenWakeReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            requireContext().registerReceiver(screenWakeReceiver, filter)
+        }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        try {
+            requireContext().unregisterReceiver(screenWakeReceiver)
+        } catch (ignored: Exception) {}
     }
 
     override fun onDestroy() {
