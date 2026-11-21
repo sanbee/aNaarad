@@ -98,10 +98,23 @@ abstract class NaaradAbstractFragment : Fragment() {
         sharedPrefs.edit().putInt(name, value).apply()
     }
 
+    fun setPreference(name: String?, value: Boolean) {
+        val ctx = activity ?: mActivity ?: return
+        val sharedPrefs = ctx.getSharedPreferences("nSettings", Context.MODE_PRIVATE)
+        prefs = sharedPrefs
+        sharedPrefs.edit().putBoolean(name, value).apply()
+    }
+
     fun getPreference(name: String?, defValue: Int): Int {
         val ctx = activity ?: mActivity ?: return defValue
         prefs = ctx.getSharedPreferences("nSettings", Context.MODE_PRIVATE)
         return prefs?.getInt(name, defValue) ?: defValue
+    }
+
+    fun getPreference(name: String?, defValue: Boolean): Boolean {
+        val ctx = activity ?: mActivity ?: return defValue
+        prefs = ctx.getSharedPreferences("nSettings", Context.MODE_PRIVATE)
+        return prefs?.getBoolean(name, defValue) ?: defValue
     }
 
     fun getPreference(name: String?, defValue: String?): String? {

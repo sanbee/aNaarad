@@ -1,0 +1,24 @@
+Yes—I largely agree with the sequence and reasoning, especially starting with the Settings screen and putting the drag-and-drop floorplan and chart last, though I would make two key adjustments to reduce risk and avoid unnecessary work.
+Seeing what your three screens actually do—Settings, a Smart-Home Floorplan with draggable lightbulbs/speech bubbles, and Sensor Plotting—changes the equation in favor of Compose for your Controls (floorplan) screen. Custom Canvas drawing, BoxWithConstraints coordinate scaling, and pointerInput { detectDragGestures } in Compose are vastly cleaner and less bug-prone than managing OnTouchListener, FrameLayout margin math, and invalidate() manually in XML Views.
+
+Two Adjustments to Improve This Plan
+
+1. Swap Phase 3 and Phase 4 (Keep ViewPager2 Until All 3 Tabs Are Composable)
+
+    Why: Right now, Phase 3 replaces TabLayout + ViewPager2 with Compose's HorizontalPager before the Controls floorplan (Phase 4) and Sensors plot (Phase 5) are converted. Trying to host legacy Fragments inside a Compose HorizontalPager requires awkward AndroidFragment / FragmentContainerView workarounds.
+    Better Order: Keep MainActivity's TabLayout + ViewPager2 intact while you migrate each Fragment's internals one by one using ComposeView inside onCreateView():
+        Phase 1: Setup NaaradTheme (Material 3).
+        Phase 2: Migrate NaaradSettingFragment internals to @Composable SettingsScreen().
+        Phase 3: Migrate NaaradControlFragment (the drag-and-drop floorplan) to @Composable ControlScreen().
+        Phase 4: Wrap VerticalTitleLineChart inside AndroidView for @Composable PlotScreen() (or leave it as an XML Fragment).
+        Phase 5: Once all three screens are @Composable, replace TabLayout + ViewPager2 in MainActivity with TabRow + HorizontalPager and delete the Fragment wrappers.
+
+2. Watch Out for One Gotcha in Phase 3 (HorizontalPager + Drag-and-Drop / Chart Panning)
+
+    Gesture Conflict: Both HorizontalPager (tab swiping), your floorplan drag-and-drop (Phase 4), and MPAndroidChart horizontal scrolling/zooming (Phase 5) consume horizontal drag gestures!
+    How to Prevent Accidental Tab Switches: When you move to HorizontalPager, pass userScrollEnabled = false on HorizontalPager so users switch tabs by tapping the TabRow—otherwise dragging a lightbulb across the floorplan or panning the sensor chart will accidentally swipe to the next tab.
+
+Quick Fact-Check on Claim #2 ("Never Call invalidate() Manually")
+
+    That is 100% true for Settings and your Floorplan Canvas—updating a mutableStateOf(Offset(...)) during detectDragGestures automatically redraws the lightbulb on the floorplan at 60/120fps with zero manual invalidate() calls.
+    However, for Phase 5 (VerticalTitleLineChart via AndroidView), MPAndroidChart is still an imperative Canvas View under the hood—so you will still need to call chart.notifyDataSetChanged() and chart.moveViewToX(...) inside AndroidView's update block (or via a state trigger) whenever new sensor points arrive.

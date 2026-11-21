@@ -26,6 +26,7 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -42,6 +43,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -93,6 +95,8 @@ class NaaradControlFragment : NaaradAbstractFragment() {
     private val ALL_WELL = "All well"
 
     // Compose state collections
+    private var themeModeState by mutableIntStateOf(0)
+    private var dynamicColorState by mutableStateOf(true)
     private val lampStates = mutableStateListOf(false, false, false)
     private val sensorValues = mutableStateMapOf<Int, Pair<Float, String>>()
     private val bulbPositions = mutableStateListOf(Offset.Zero, Offset.Zero, Offset.Zero)
@@ -214,7 +218,17 @@ class NaaradControlFragment : NaaradAbstractFragment() {
         return ComposeView(requireContext()).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
-                NaaradTheme {
+                val systemDark = isSystemInDarkTheme()
+                val isDark = when (themeModeState) {
+                    1 -> false
+                    2 -> true
+                    else -> systemDark
+                }
+
+                NaaradTheme(
+                    darkTheme = isDark,
+                    dynamicColor = dynamicColorState
+                ) {
                     ControlScreen(
                         lampStates = lampStates,
                         sensorValues = sensorValues,
@@ -243,6 +257,8 @@ class NaaradControlFragment : NaaradAbstractFragment() {
 
     override fun onResume() {
         super.onResume()
+        themeModeState = getPreference("themeMode", 0)
+        dynamicColorState = getPreference("dynamicColorEnabled", true)
         controlViewModel.lastJsonData?.let { json -> setSensorValues(json) }
         Log.d("NCF::onResume", "From NCF::onResume")
     }

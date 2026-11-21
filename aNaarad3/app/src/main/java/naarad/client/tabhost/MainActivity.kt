@@ -17,6 +17,7 @@
 
 package naarad.client.tabhost
 
+import android.content.res.Configuration
 import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Bundle
@@ -30,6 +31,7 @@ import android.text.style.StyleSpan
 import android.view.Gravity
 import android.view.View
 import android.widget.TextView
+import androidx.core.view.WindowCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.viewpager2.widget.ViewPager2
 import com.google.android.material.tabs.TabLayout
@@ -104,8 +106,39 @@ class MainActivity : FragmentActivity(), NaaradPlotFragment.nPlotDataArrivalList
         }
     }
 
+    fun applyAppTheme() {
+        val prefs = getSharedPreferences("nSettings", MODE_PRIVATE)
+        val themeMode = prefs.getInt("themeMode", 0)
+        val isNightMode = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        val isDark = when (themeMode) {
+            1 -> false
+            2 -> true
+            else -> isNightMode
+        }
+
+        val bgColor = if (isDark) Color.parseColor("#0F172A") else Color.parseColor("#F8FAFC")
+        val textColor = if (isDark) Color.parseColor("#F8FAFC") else Color.parseColor("#0F172A")
+
+        mTabLayout?.setBackgroundColor(bgColor)
+        mTabLayout?.setTabTextColors(textColor, Color.parseColor("#06B6D4"))
+
+        val tabCount = mTabLayout?.tabCount ?: 0
+        for (i in 0 until tabCount) {
+            val tab = mTabLayout?.getTabAt(i)
+            (tab?.customView as? TextView)?.setTextColor(textColor)
+        }
+
+        window?.statusBarColor = bgColor
+        window?.navigationBarColor = bgColor
+        WindowCompat.getInsetsController(window, window.decorView).apply {
+            isAppearanceLightStatusBars = !isDark
+            isAppearanceLightNavigationBars = !isDark
+        }
+    }
+
     override fun onResume() {
         super.onResume()
+        applyAppTheme()
         val myApp = application as? NaaradApp
         if (myApp != null) {
             mViewPager?.isUserInputEnabled = myApp.swipeState
@@ -118,6 +151,8 @@ class MainActivity : FragmentActivity(), NaaradPlotFragment.nPlotDataArrivalList
 
         val viewPager = findViewById<ViewPager2>(R.id.view_pager).also { mViewPager = it }
         val tabLayout = findViewById<TabLayout>(R.id.tab_layout).also { mTabLayout = it }
+
+        applyAppTheme()
 
         val controlFragment = NaaradControlFragment.newInstance("Naarad Control Fragment")
         gControlFragment = controlFragment
@@ -144,11 +179,22 @@ class MainActivity : FragmentActivity(), NaaradPlotFragment.nPlotDataArrivalList
                 2 -> "⚙️" to "Settings"
                 else -> "" to ""
             }
+            val prefs = getSharedPreferences("nSettings", MODE_PRIVATE)
+            val themeMode = prefs.getInt("themeMode", 0)
+            val isNightMode = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+            val isDark = when (themeMode) {
+                1 -> false
+                2 -> true
+                else -> isNightMode
+            }
+            val currentTextColor = if (isDark) Color.parseColor("#F8FAFC") else Color.parseColor("#0F172A")
+
             val tabTextView = TextView(this).apply {
                 text = formatTabTitle(icon, title)
                 gravity = Gravity.CENTER
                 textAlignment = View.TEXT_ALIGNMENT_CENTER
                 setLineSpacing(0f, 1.0f)
+                setTextColor(currentTextColor)
                 alpha = if (position == viewPager.currentItem) 1.0f else 0.5f
             }
             tab.customView = tabTextView

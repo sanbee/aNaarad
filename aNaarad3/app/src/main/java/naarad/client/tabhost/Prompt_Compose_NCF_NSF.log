@@ -1,0 +1,138 @@
+!!!!!!!THIS PROMPT HAS BEEN APPLIED!!!!!!
+
+# Task: Upgrade Naarad App Theme to Material 3 & Material You (`dynamicColor = true`)
+
+## Scope
+Upgrade the existing Compose theme (`NaaradTheme`) and already-migrated Compose screens (`SettingsScreen` and `ControlScreen`) to full **Material 3** with **Android 12+ Material You dynamic wallpaper coloring (`dynamicColor = true`)**, automatic system Dark/Light mode support, and user-configurable theme preferences in `SettingsScreen`.
+
+*(Do NOT migrate `NaaradPlotFragment` or `MainActivity`'s `TabLayout + ViewPager2` in this task-focus strictly on Material 3 theming, Material You dynamic colors, and Settings controls.)*
+
+## Requirements
+
+### 1. Update `NaaradTheme` (`ui/theme/Theme.kt`)
+- Ensure `NaaradTheme` uses `androidx.compose.material3.MaterialTheme` and defaults to `dynamicColor: Boolean = true` and `darkTheme: Boolean = isSystemInDarkTheme()`:
+  ```kotlin
+  @Composable
+  fun NaaradTheme(
+      darkTheme: Boolean = isSystemInDarkTheme(),
+      dynamicColor: Boolean = true, // Android 12+ Material You wallpaper colors enabled by default
+      content: @Composable () -> Unit
+  ) {
+      val colorScheme = when {
+          dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+              val context = LocalContext.current
+              if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+          }
+          darkTheme -> DarkColorScheme
+          else -> LightColorScheme
+      }
+
+      MaterialTheme(
+          colorScheme = colorScheme,
+          typography = Typography,
+          shapes = Shapes,
+          content = content
+      )
+  }
+  ```
+- Define clean fallback `LightColorScheme` and `DarkColorScheme` palettes in `ui/theme/Color.kt` for devices below Android 12 (API < 31) or when the user disables Dynamic Color.
+- Define consistent `Shapes` in `ui/theme/Shape.kt` so buttons, cards, and inputs share uniform Material 3 corner rounding.
+- Configure edge-to-edge status/navigation bar icon contrast (light vs. dark system bar icons) in `NaaradTheme` so system bars match the active light/dark theme cleanly.
+
+### 2. Audit Existing Composables (`SettingsScreen` & `ControlScreen`)
+- Replace any legacy `androidx.compose.material.*` (Material 2) imports with `androidx.compose.material3.*`.
+- Replace hardcoded UI background, card, button, and text colors with semantic `MaterialTheme.colorScheme` tokens (`background`, `surface`, `surfaceContainer`, `primary`, `secondary`, `onSurface`, `onSurfaceVariant`, `outline`, etc.) so Material You wallpaper colors propagate across buttons, switches, sliders, and cards automatically.
+- Keep domain-specific smart-home semantic colors (such as active lightbulb glow or alert states) harmonious with both light and dark modes.
+
+### 3. Add Theme Controls to `SettingsScreen`
+- Add a **Theme Mode** selector in `SettingsScreen` with three options:
+  - **System Default** (follows Android OS Dark/Light mode)
+  - **Light**
+  - **Dark**
+- Add a **Material You (Dynamic Color)** `Switch` in `SettingsScreen` (defaulting to `true`; optionally hide or disable with a note on devices below Android 12 / API 31).
+- Persist both preferences using the app's existing storage mechanism (e.g., `SharedPreferences` or `DataStore`-inspect `NaaradSettingFragment` / `SettingsScreen` first to match the existing pattern) and observe them reactively so changing either setting updates `NaaradTheme` immediately without restarting the app.
+- Update/add `@Preview` functions in Light Mode, Dark Mode, and Dynamic Color configurations to verify visual appearance.
+
+## Instructions
+1. Inspect `ui/theme/*`, `NaaradSettingFragment.kt` / `SettingsScreen.kt`, and `NaaradControlFragment.kt` / `ControlScreen.kt` first.
+2. Apply the Material 3 + Material You updates, verify that the project compiles cleanly with zero Material 2 conflicts, and provide a brief summary of changes.
+
+--------------------------------------------------------------------------------------------------
+
+Summary of App-Wide Theme Integration
+1. MainActivity.kt ( MainActivity.kt):
+
+   Added applyAppTheme(), which reads themeMode (System, Light, Dark)
+   and updates:
+
+   TabLayout background color and tab text colors.
+
+   System Status Bar and Navigation Bar colors and light/dark icon
+   contrast via WindowCompat.
+
+2. NaaradPlotFragment.kt (NaaradPlotFragment.kt):
+
+   Added applyChartTheme(), which dynamically updates MPAndroidChart
+   background, X/Y grid line colors, legend text colors, and axis
+   label colors to match Light vs. Dark theme selections cleanly.
+
+3. NaaradControlFragment.kt (NaaradControlFragment.kt):
+
+   Observes themeMode and dynamicColorEnabled in real time, updating
+   the Compose Material 3 theme across floorplan buttons,
+   speak-bubbles, and containers instantly.
+
+4. NaaradSettingFragment.kt (NaaradSettingFragment.kt):
+
+   Reactively drives the app-wide theme selection (System Default,
+   Light, Dark) and Material You Dynamic Color toggles.
+
+
+Changes Applied (NaaradSettingFragment.kt)
+
+   Compact Side-by-Side Row: Grouped Ping Timeout, Plot Range, and
+   ReSync Scale entry boxes side-by-side using a single Row with equal
+   Modifier.weight(1f) distribution.
+
+   Top Placement: Placed the compact time configuration row as the
+   first item directly below the "Naarad Settings" header title.
+
+   Live Persistence: Tapping Done or typing into any of the 3 time
+   entry boxes validates and saves preferences live.
+
+--------------------------------------------------------------------------------------------------
+
+I have updated NaaradControlFragment.kt so that the Controls panel
+updates its theme reactively when you change theme settings in the
+Settings tab: Cause & Fix (NaaradControlFragment.kt)
+
+Cause: Previously, themeModeState and dynamicColorState were
+non-reactive local variables initialized only once in
+onCreateView(). Because onCreateView() is not re-invoked when
+switching between tabs in ViewPager2, NaaradControlFragment never
+recomposed when theme preferences changed.
+
+Fix:
+
+i. Converted themeModeState and dynamicColorState to reactive Compose
+   state fields (mutableIntStateOf and mutableStateOf):
+
+     private var themeModeState by mutableIntStateOf(0)
+     private var dynamicColorState by mutableStateOf(true)
+
+ii. Updated onResume() to refresh themeModeState and dynamicColorState
+    from preferences whenever returning to the Controls tab:
+
+      override fun onResume() {
+        super.onResume()
+        themeModeState = getPreference("themeMode", 0)
+        dynamicColorState = getPreference("dynamicColorEnabled", true)
+        controlViewModel.lastJsonData?.let { json -> setSensorValues(json) }
+      }
+
+Changing the Theme Mode (System Default, Light, Dark) or Dynamic Color
+settings in the Settings tab now updates the Controls panel theme and
+colors instantly.
+
+--------------------------------------------------------------------------------------------------
+

@@ -17,11 +17,14 @@
 
 package naarad.client.tabhost
 
+import android.content.res.Configuration
+import android.os.Build
 import android.os.Bundle
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -29,17 +32,21 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -50,6 +57,7 @@ import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import naarad.client.tabhost.theme.NaaradTheme
 
@@ -161,7 +169,20 @@ class NaaradSettingFragment : NaaradAbstractFragment() {
         return ComposeView(requireContext()).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
-                NaaradTheme {
+                var themeModeState by remember { mutableIntStateOf(getPreference("themeMode", 0)) }
+                var dynamicColorState by remember { mutableStateOf(getPreference("dynamicColorEnabled", true)) }
+
+                val systemDark = isSystemInDarkTheme()
+                val isDark = when (themeModeState) {
+                    1 -> false
+                    2 -> true
+                    else -> systemDark
+                }
+
+                NaaradTheme(
+                    darkTheme = isDark,
+                    dynamicColor = dynamicColorState
+                ) {
                     SettingsScreen(
                         initialServerName = NaaradUtils.serverName,
                         initialServerPort = NaaradUtils.serverPort.toString(),
@@ -170,6 +191,16 @@ class NaaradSettingFragment : NaaradAbstractFragment() {
                         initialReSyncTimescale = NaaradUtils.currentPlotReSyncTimescaleStr,
                         initialWifiControl = getPreference("wifiControl", 0) == 1,
                         initialWakeControl = getPreference("wakeControl", 0) == 1,
+                        initialThemeMode = themeModeState,
+                        initialDynamicColor = dynamicColorState,
+                        onThemeModeChanged = { mode ->
+                            themeModeState = mode
+                            setPreference("themeMode", mode)
+                        },
+                        onDynamicColorChanged = { enabled ->
+                            dynamicColorState = enabled
+                            setPreference("dynamicColorEnabled", enabled)
+                        },
                         onSaveSettings = { name, portStr, pingTO, plotRange, reSyncScale, wifiOn, wakeOn ->
                             saveSettings(name, portStr, pingTO, plotRange, reSyncScale, wifiOn, wakeOn)
                         }
@@ -199,7 +230,11 @@ fun SettingsScreen(
     initialReSyncTimescale: String,
     initialWifiControl: Boolean,
     initialWakeControl: Boolean,
-    onSaveSettings: (String, String, String, String, String, Boolean, Boolean) -> Unit
+    initialThemeMode: Int = 0,
+    initialDynamicColor: Boolean = true,
+    onThemeModeChanged: (Int) -> Unit = {},
+    onDynamicColorChanged: (Boolean) -> Unit = {},
+    onSaveSettings: (String, String, String, String, String, Boolean, Boolean) -> Unit = { _, _, _, _, _, _, _ -> }
 ) {
     var serverName by remember { mutableStateOf(initialServerName) }
     var serverPort by remember { mutableStateOf(initialServerPort) }
@@ -208,6 +243,10 @@ fun SettingsScreen(
     var reSyncTimescale by remember { mutableStateOf(initialReSyncTimescale) }
     var wifiControl by remember { mutableStateOf(initialWifiControl) }
     var wakeControl by remember { mutableStateOf(initialWakeControl) }
+    var themeMode by remember { mutableIntStateOf(initialThemeMode) }
+    var dynamicColor by remember { mutableStateOf(initialDynamicColor) }
+
+    val isAndroid12Plus = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -227,6 +266,127 @@ fun SettingsScreen(
                 color = MaterialTheme.colorScheme.onBackground
             )
 
+            // Compact Time Configuration Entry Boxes (First item in Settings)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedTextField(
+                    value = pingTimeout,
+                    onValueChange = { newValue ->
+                        pingTimeout = newValue
+                        val sec = NaaradUtils.parseHmsToSeconds(newValue)
+                        if (sec > 0.0) {
+                            NaaradUtils.currentPingTimeoutStr = newValue
+                        }
+                    },
+                    label = { Text("Ping Timeout") },
+                    modifier = Modifier.weight(1f),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done)
+                )
+
+                OutlinedTextField(
+                    value = plotTimerange,
+                    onValueChange = { newValue ->
+                        plotTimerange = newValue
+                        val sec = NaaradUtils.parseHmsToSeconds(newValue)
+                        if (sec > 0.0) {
+                            NaaradUtils.currentPlotTimerangeStr = newValue
+                        }
+                    },
+                    label = { Text("Plot Range") },
+                    modifier = Modifier.weight(1f),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done)
+                )
+
+                OutlinedTextField(
+                    value = reSyncTimescale,
+                    onValueChange = { newValue ->
+                        reSyncTimescale = newValue
+                        val sec = NaaradUtils.parseHmsToSeconds(newValue)
+                        if (sec > 0.0) {
+                            NaaradUtils.currentPlotReSyncTimescaleStr = newValue
+                        }
+                    },
+                    label = { Text("ReSync Scale") },
+                    modifier = Modifier.weight(1f),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done)
+                )
+            }
+
+            // Theme Mode & Material You Settings Card
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = "Theme & Appearance",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+
+                    // Theme Mode Selector Chips
+                    Text(
+                        text = "Theme Mode",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        val options = listOf("System", "Light", "Dark")
+                        options.forEachIndexed { index, label ->
+                            FilterChip(
+                                selected = themeMode == index,
+                                onClick = {
+                                    themeMode = index
+                                    onThemeModeChanged(index)
+                                },
+                                label = { Text(label) }
+                            )
+                        }
+                    }
+
+                    // Material You Dynamic Color Switch (Android 12+)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Material You Dynamic Colors",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = if (isAndroid12Plus) "Use Android 12+ wallpaper color scheme" else "Requires Android 12+",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = dynamicColor && isAndroid12Plus,
+                            onCheckedChange = { enabled ->
+                                dynamicColor = enabled
+                                onDynamicColorChanged(enabled)
+                            },
+                            enabled = isAndroid12Plus
+                        )
+                    }
+                }
+            }
+
+            // Server Connection Card
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -264,6 +424,7 @@ fun SettingsScreen(
                 }
             }
 
+            // Controls & Wakelock Checkboxes
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
@@ -293,51 +454,38 @@ fun SettingsScreen(
                     color = MaterialTheme.colorScheme.onBackground
                 )
             }
-
-            OutlinedTextField(
-                value = pingTimeout,
-                onValueChange = { newValue ->
-                    pingTimeout = newValue
-                    val sec = NaaradUtils.parseHmsToSeconds(newValue)
-                    if (sec > 0.0) {
-                        NaaradUtils.currentPingTimeoutStr = newValue
-                    }
-                },
-                label = { Text("Ping Timeout (e.g. 1m, 30s)") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done)
-            )
-
-            OutlinedTextField(
-                value = plotTimerange,
-                onValueChange = { newValue ->
-                    plotTimerange = newValue
-                    val sec = NaaradUtils.parseHmsToSeconds(newValue)
-                    if (sec > 0.0) {
-                        NaaradUtils.currentPlotTimerangeStr = newValue
-                    }
-                },
-                label = { Text("Plot Timerange (e.g. 2d, 12h)") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done)
-            )
-
-            OutlinedTextField(
-                value = reSyncTimescale,
-                onValueChange = { newValue ->
-                    reSyncTimescale = newValue
-                    val sec = NaaradUtils.parseHmsToSeconds(newValue)
-                    if (sec > 0.0) {
-                        NaaradUtils.currentPlotReSyncTimescaleStr = newValue
-                    }
-                },
-                label = { Text("ReSync Timescale (e.g. 30m, 1h)") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done)
-            )
         }
+    }
+}
+
+@Preview(name = "Settings Screen - Light Mode", showBackground = true)
+@Composable
+fun SettingsScreenLightPreview() {
+    NaaradTheme(darkTheme = false, dynamicColor = false) {
+        SettingsScreen(
+            initialServerName = "192.168.0.126",
+            initialServerPort = "1234",
+            initialPingTimeout = "1m",
+            initialPlotTimerange = "2d",
+            initialReSyncTimescale = "30m",
+            initialWifiControl = true,
+            initialWakeControl = false
+        )
+    }
+}
+
+@Preview(name = "Settings Screen - Dark Mode", uiMode = Configuration.UI_MODE_NIGHT_YES, showBackground = true)
+@Composable
+fun SettingsScreenDarkPreview() {
+    NaaradTheme(darkTheme = true, dynamicColor = false) {
+        SettingsScreen(
+            initialServerName = "192.168.0.126",
+            initialServerPort = "1234",
+            initialPingTimeout = "1m",
+            initialPlotTimerange = "2d",
+            initialReSyncTimescale = "30m",
+            initialWifiControl = true,
+            initialWakeControl = false
+        )
     }
 }

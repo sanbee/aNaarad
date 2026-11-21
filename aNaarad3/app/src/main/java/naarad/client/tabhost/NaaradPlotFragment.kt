@@ -18,6 +18,7 @@
 package naarad.client.tabhost
 
 import android.content.Context
+import android.content.res.Configuration
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
@@ -241,6 +242,36 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
         chart.invalidate()
     }
 
+    fun applyChartTheme(chart: LineChart? = mLineChart) {
+        val targetChart = chart ?: return
+        val ctx = context ?: return
+        val prefs = ctx.getSharedPreferences("nSettings", Context.MODE_PRIVATE)
+        val themeMode = prefs.getInt("themeMode", 0)
+        val isNightMode = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+        val isDark = when (themeMode) {
+            1 -> false
+            2 -> true
+            else -> isNightMode
+        }
+
+        val bgColor = if (isDark) Color.argb(200, 15, 23, 42) else Color.argb(230, 248, 250, 252)
+        val textColor = if (isDark) Color.WHITE else Color.BLACK
+        val gridColor = if (isDark) Color.DKGRAY else Color.LTGRAY
+
+        targetChart.setBackgroundColor(bgColor)
+        targetChart.legend.textColor = textColor
+
+        val xAxis = targetChart.xAxis
+        xAxis.gridColor = gridColor
+        xAxis.textColor = textColor
+
+        val leftAxis = targetChart.axisLeft
+        leftAxis.gridColor = gridColor
+        leftAxis.textColor = textColor
+
+        targetChart.invalidate()
+    }
+
     private fun initChart(chart: LineChart) {
         val chartUnit = getPreference("plotUnit", "C") ?: "C"
         (chart as? VerticalTitleLineChart)?.yAxisTitle = "Temperature ($chartUnit)"
@@ -249,9 +280,9 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
         chart.isDragEnabled = true
         chart.setScaleEnabled(true)
         chart.setPinchZoom(true)
-        chart.setBackgroundColor(Color.argb(100, 50, 50, 50))
-        chart.legend.textColor = Color.WHITE
         chart.setExtraOffsets(20f, 0f, 0f, 0f)
+
+        applyChartTheme(chart)
 
         val xAxis = chart.xAxis
         xAxis.position = XAxis.XAxisPosition.BOTTOM
@@ -385,6 +416,7 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
     override fun onResume() {
         Log.d("NPF::onResume","NPF resumed")
         super.onResume()
+        applyChartTheme()
     }
 
     override fun onPause() {
