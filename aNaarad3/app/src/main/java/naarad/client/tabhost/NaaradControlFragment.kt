@@ -40,6 +40,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -291,15 +292,19 @@ fun ControlScreen(
     var highlightedBulbIndex by remember { mutableStateOf<Int?>(null) }
     var highlightedBubbleIndex by remember { mutableStateOf<Int?>(null) }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .paint(
-                painter = painterResource(id = R.drawable.ourhouse2),
-                contentScale = ContentScale.FillBounds,
-                alpha = 0.7f
-            )
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background
     ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .paint(
+                    painter = painterResource(id = R.drawable.ourhouse2),
+                    contentScale = ContentScale.FillBounds,
+                    alpha = 0.7f
+                )
+        ) {
         // Render 3 Lamp Icons + Number Badges
         for (i in 0 until 3) {
             val isLampOn = lampStates.getOrNull(i) == true
@@ -448,18 +453,18 @@ fun ControlScreen(
                 Button(
                     onClick = { onLampToggle(i) },
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isLampOn) MaterialTheme.colorScheme.primary else ComposeColor(0xFF374151),
-                        contentColor = ComposeColor.White
+                        containerColor = if (isLampOn) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = if (isLampOn) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSecondaryContainer
                     )
                 ) {
                     Text(
                         text = "Lamp ${i + 1}",
                         fontWeight = FontWeight.Bold,
-                        fontSize = 12.sp,
-                        color = ComposeColor.White
+                        fontSize = 12.sp
                     )
                 }
             }
         }
     }
+}
 }
