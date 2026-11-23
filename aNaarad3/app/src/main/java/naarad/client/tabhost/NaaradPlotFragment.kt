@@ -1,156 +1,68 @@
-/*
- * Copyright (C) 2026 Sanjay Bhatnagar
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should obtain a copy of the GNU General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
- */
-
 package naarad.client.tabhost
 
 import android.content.Context
 import android.content.res.Configuration
-import android.graphics.Canvas
-import android.graphics.Color
-import android.graphics.Paint
-import android.graphics.RectF
-import android.util.AttributeSet
-import android.util.TypedValue
-import android.view.MotionEvent
 import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
-import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
 import android.util.Log
-import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ToggleButton
-import com.github.mikephil.charting.charts.LineChart
-import com.github.mikephil.charting.components.XAxis
-import com.github.mikephil.charting.data.Entry
-import com.github.mikephil.charting.data.LineData
-import com.github.mikephil.charting.data.LineDataSet
-import com.github.mikephil.charting.formatter.ValueFormatter
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.lifecycleScope
+import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
+import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottom
+import com.patrykandpatrick.vico.compose.cartesian.axis.rememberStart
+import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisLabelComponent
+import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisGuidelineComponent
+import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
+import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLine
+import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
+import com.patrykandpatrick.vico.core.cartesian.data.CartesianLayerRangeProvider
+import com.patrykandpatrick.vico.core.common.data.ExtraStore
+import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
+import com.patrykandpatrick.vico.compose.cartesian.VicoZoomState
+import com.patrykandpatrick.vico.core.cartesian.Zoom
+import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
+import com.patrykandpatrick.vico.core.cartesian.axis.HorizontalAxis
+import com.patrykandpatrick.vico.core.cartesian.axis.VerticalAxis
+import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
+import com.patrykandpatrick.vico.core.cartesian.data.CartesianValueFormatter
+import com.patrykandpatrick.vico.core.cartesian.data.lineSeries
+import com.patrykandpatrick.vico.core.cartesian.layer.LineCartesianLayer
+import com.patrykandpatrick.vico.compose.common.fill
 import com.sanbee.anaarad.R
-import org.json.JSONException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import org.json.JSONObject
 import java.io.BufferedReader
-import java.io.IOException
 import java.io.InputStreamReader
 import java.io.PrintWriter
 import java.net.Socket
 import java.text.SimpleDateFormat
+import java.util.Collections
 import java.util.Date
 import java.util.HashMap
 import java.util.Locale
 import kotlin.math.roundToLong
 
-import kotlin.math.abs
-import kotlin.math.round
-
-class VerticalTitleLineChart @JvmOverloads constructor(
-    context: Context,
-    attrs: AttributeSet? = null,
-    defStyle: Int = 0
-) : LineChart(context, attrs, defStyle) {
-    var yAxisTitle: String = "Temperature (C)"
-    var yAxisTitleColor: Int = Color.BLACK
-    var yAxisTitleSize: Float = 10f
-    var onTitleClickListener: (() -> Unit)? = null
-
-    private val titlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        textAlign = Paint.Align.CENTER
-        isFakeBoldText = true
-    }
-
-    private val buttonBgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.rgb(214, 215, 215)
-        style = Paint.Style.FILL
-    }
-
-    private val buttonRect = RectF()
-
-    private var touchStartX = 0f
-    private var touchStartY = 0f
-
-    override fun onTouchEvent(event: MotionEvent): Boolean {
-        val labelWidthPx = TypedValue.applyDimension(
-            TypedValue.COMPLEX_UNIT_DIP,
-            40f,
-            resources.displayMetrics
-        )
-        when (event.action) {
-            MotionEvent.ACTION_DOWN -> {
-                touchStartX = event.x
-                touchStartY = event.y
-            }
-            MotionEvent.ACTION_UP -> {
-                val dx = Math.abs(event.x - touchStartX)
-                val dy = Math.abs(event.y - touchStartY)
-                if (touchStartX <= labelWidthPx && dx < 15f && dy < 15f) {
-                    onTitleClickListener?.invoke()
-                    return true
-                }
-            }
-        }
-        return super.onTouchEvent(event)
-    }
-
-    override fun onDraw(canvas: Canvas) {
-        super.onDraw(canvas)
-        if (yAxisTitle.isNotEmpty()) {
-            titlePaint.color = yAxisTitleColor
-            titlePaint.textSize = TypedValue.applyDimension(
-                TypedValue.COMPLEX_UNIT_SP,
-                yAxisTitleSize,
-                resources.displayMetrics
-            )
-
-            canvas.save()
-            val x = TypedValue.applyDimension(
-                TypedValue.COMPLEX_UNIT_DIP,
-                12f,
-                resources.displayMetrics
-            )
-            val y = height / 2f
-            canvas.rotate(-90f, x, y)
-
-            // Draw button frame matching top-right unitButton style
-            val textWidth = titlePaint.measureText(yAxisTitle)
-            val padX = 10f
-            val padY = 5f
-            buttonRect.set(
-                x - textWidth / 2f - padX,
-                y - titlePaint.textSize + padY - 5f,
-                x + textWidth / 2f + padX,
-                y + padY
-            )
-
-            canvas.drawRoundRect(buttonRect, 4f, 4f, buttonBgPaint)
-
-            canvas.drawText(yAxisTitle, x, y, titlePaint)
-            canvas.restore()
-        }
-    }
-}
-
 class NaaradPlotFragment : NaaradAbstractFragment() {
-    private var mLineChart: LineChart? = null
-
     private var apiLevel = 0
     var myApp: NaaradApp? = null
 
@@ -158,8 +70,34 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
     private var nConnected = false
     var mMainActivityCallback: nPlotDataArrivalListener? = null
 
+    data class TelemetryDataPoint(val x: Double, val y: Double)
+
+    private val nodeSeriesData = arrayOf(
+        Collections.synchronizedList(ArrayList<TelemetryDataPoint>()),
+        Collections.synchronizedList(ArrayList<TelemetryDataPoint>())
+    )
+
+    private val modelProducer = CartesianChartModelProducer()
+    private val baseTimestampState = mutableStateOf(System.currentTimeMillis().toDouble())
+
+    private val plotUnitState = mutableStateOf("C")
+    private var themeModeState by mutableIntStateOf(0)
+
+
+    companion object {
+        private var mRootView: View? = null
+        var activeInstance: NaaradPlotFragment? = null
+        
+        fun newInstanceNPF(sampleText: String?): NaaradPlotFragment {
+            val f = NaaradPlotFragment()
+            val b = Bundle()
+            b.putString("bString", sampleText)
+            f.arguments = b
+            return f
+        }
+    }
+
     interface nPlotDataArrivalListener {
-        /** Called by NaaradPlotFragment when OTA RF data arrives  */
         fun onDataArrival(json: String?)
     }
 
@@ -179,225 +117,222 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
             myApp = act.application as? NaaradApp
         }
 
-        val rootView = if (!recreateView(mView)) {
-            inflater.inflate(R.layout.activity_naarad_plot, container, false).also { mView = it }
+        val rootView = if (!recreateView(mRootView)) {
+            inflater.inflate(R.layout.activity_naarad_plot, container, false).also { mRootView = it }
         } else {
-            mView ?: inflater.inflate(R.layout.activity_naarad_plot, container, false).also { mView = it }
+            mRootView ?: inflater.inflate(R.layout.activity_naarad_plot, container, false).also { mRootView = it }
         }
 
         try {
             mMainActivityCallback = activity as? nPlotDataArrivalListener
         } catch (e: ClassCastException) {
-            throw ClassCastException(
-                "${activity} must implement mMainActivityCallback"
-            )
+            throw ClassCastException("${activity} must implement mMainActivityCallback")
         }
 
-        val lineChart = rootView.findViewById<LineChart>(R.id.lineChart)
-        mLineChart = lineChart
-        (lineChart as? VerticalTitleLineChart)?.let { chart ->
-            initChart(chart)
-            chart.onTitleClickListener = {
-                val currentUnit = getPreference("plotUnit", "C") ?: "C"
-                val newUnit = if (currentUnit == "C") "F" else "C"
-                setPreference("plotUnit", newUnit)
-                switchPlotUnit(newUnit)
-            }
+        plotUnitState.value = getPreference("plotUnit", "C") ?: "C"
+        baseTimestampState.value = System.currentTimeMillis().toDouble()
+
+        rootView.findViewById<ComposeView>(R.id.composeView).setContent {
+            NaaradChartScreen()
         }
 
+        mSensorDataSource = SensorDataSource()
         nConnected = true
-        startAllCharts(-1)
+        mSensorDataSource?.execute()
 
         return rootView
     }
 
-    fun switchPlotUnit(unit: String) {
-        val chart = mLineChart as? VerticalTitleLineChart ?: return
-        val currentTitleUnit = if (chart.yAxisTitle.contains("F")) "F" else "C"
-        if (currentTitleUnit == unit) return
-
-        chart.yAxisTitle = "Temperature ($unit)"
-
-        val data = chart.data ?: return
-        for (i in 0 until data.dataSetCount) {
-            val dataSet = data.getDataSetByIndex(i) as? LineDataSet ?: continue
-            for (j in 0 until dataSet.entryCount) {
-                val entry = dataSet.getEntryForIndex(j)
-                val oldY = entry.y
-                val newY = if (unit == "F") {
-                    oldY * 9.0f / 5.0f + 32.0f
-                } else {
-                    (oldY - 32.0f) * 5.0f / 9.0f
-                }
-                entry.y = newY
-            }
-            dataSet.notifyDataSetChanged()
-        }
-
-        chart.axisLeft.resetAxisMaximum()
-        chart.axisLeft.resetAxisMinimum()
-        data.notifyDataChanged()
-        chart.notifyDataSetChanged()
-        chart.calculateOffsets()
-        chart.invalidate()
-    }
-
-    fun applyChartTheme(chart: LineChart? = mLineChart) {
-        val targetChart = chart ?: return
-        val ctx = context ?: return
-        val prefs = ctx.getSharedPreferences("nSettings", Context.MODE_PRIVATE)
-        val themeMode = prefs.getInt("themeMode", 0)
-        val isNightMode = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
-        val isDark = when (themeMode) {
+    @Composable
+    fun NaaradChartScreen() {
+        val ctx = androidx.compose.ui.platform.LocalContext.current
+        val isNightMode = (ctx.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        val isDark = when (themeModeState) {
             1 -> false
             2 -> true
             else -> isNightMode
         }
 
-        val bgColor = if (isDark) Color.argb(200, 15, 23, 42) else Color.argb(230, 248, 250, 252)
-        val textColor = if (isDark) Color.WHITE else Color.BLACK
-        val gridColor = if (isDark) Color.DKGRAY else Color.LTGRAY
 
-        targetChart.setBackgroundColor(bgColor)
-        targetChart.legend.textColor = textColor
+        val bgColor = if (isDark) Color(0xFF0F172A) else Color(0xFFF8FAFC)
+        val textColor = if (isDark) Color.White else Color.Black
+        val gridColor = if (isDark) Color.DarkGray else Color.LightGray
+        
+        val unit by plotUnitState
 
-        val xAxis = targetChart.xAxis
-        xAxis.gridColor = gridColor
-        xAxis.textColor = textColor
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = bgColor
+        ) {
+            Column(modifier = Modifier.padding(8.dp)) {
+                // Legend
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(modifier = Modifier.size(8.dp).background(Color(0xFF4CAF50)))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(text = "Node 1", color = textColor, fontSize = 8.sp, fontWeight = FontWeight.SemiBold)
+                    
+                    Spacer(modifier = Modifier.width(24.dp))
+                    
+                    Box(modifier = Modifier.size(8.dp).background(Color(0xFF2196F3)))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(text = "Node 3", color = textColor, fontSize = 8.sp, fontWeight = FontWeight.SemiBold)
+                }
 
-        val leftAxis = targetChart.axisLeft
-        leftAxis.gridColor = gridColor
-        leftAxis.textColor = textColor
+                val bottomAxisValueFormatter = CartesianValueFormatter { _, x, _ ->
+                    val timestampMs = baseTimestampState.value + x
+                    val date = Date(timestampMs.toLong())
+                    val timeFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
+                    //val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+                    val dateFormat = SimpleDateFormat("dd/MM", Locale.getDefault())
+                    timeFormat.format(date) + "\n" + dateFormat.format(date)
+                }
+                
+                val bottomAxis = HorizontalAxis.rememberBottom(
+                    label = rememberAxisLabelComponent(
+                        color = textColor,
+                        lineCount = 2,
+                        textSize = 8.sp
+                    ),
+                    valueFormatter = bottomAxisValueFormatter,
+                    itemPlacer = HorizontalAxis.ItemPlacer.aligned(
+                        spacing = { 3 },
+                        shiftExtremeLines = false
+                    ),
+                    guideline = rememberAxisGuidelineComponent(fill = fill(gridColor))
+                )
+                
+                val startAxisValueFormatter = CartesianValueFormatter { _, y, _ ->
+                    String.format(Locale.getDefault(), "%.0f", y)
+                }
 
-        targetChart.invalidate()
-    }
+                val startAxis = VerticalAxis.rememberStart(
+                    label = rememberAxisLabelComponent(
+                        color = textColor,
+                        textSize = 8.sp
+                    ),
+                    valueFormatter = startAxisValueFormatter,
+                    guideline = rememberAxisGuidelineComponent(fill = fill(gridColor))
+                )
 
-    private fun initChart(chart: LineChart) {
-        val chartUnit = getPreference("plotUnit", "C") ?: "C"
-        (chart as? VerticalTitleLineChart)?.yAxisTitle = "Temperature ($chartUnit)"
-        chart.description.isEnabled = false
-        chart.setTouchEnabled(true)
-        chart.isDragEnabled = true
-        chart.setScaleEnabled(true)
-        chart.setPinchZoom(true)
-        chart.setExtraOffsets(20f, 0f, 0f, 0f)
+                val customRangeProvider = remember {
+                    object : CartesianLayerRangeProvider {
+                        override fun getMinX(minX: Double, maxX: Double, extraStore: ExtraStore) = minX
+                        override fun getMaxX(minX: Double, maxX: Double, extraStore: ExtraStore) = maxX
+                        override fun getMinY(minY: Double, maxY: Double, extraStore: ExtraStore): Double {
+                            val padding = if (maxY == minY) 1.0 else (maxY - minY) * 0.05
+                            return minY - padding
+                        }
+                        override fun getMaxY(minY: Double, maxY: Double, extraStore: ExtraStore): Double {
+                            val padding = if (maxY == minY) 1.0 else (maxY - minY) * 0.05
+                            return maxY + padding
+                        }
+                    }
+                }
 
-        applyChartTheme(chart)
+                val lineLayer = rememberLineCartesianLayer(
+                    lineProvider = LineCartesianLayer.LineProvider.series(
+                        LineCartesianLayer.rememberLine(LineCartesianLayer.LineFill.single(fill(Color(0xFF4CAF50)))),
+                        LineCartesianLayer.rememberLine(LineCartesianLayer.LineFill.single(fill(Color(0xFF2196F3))))
+                    ),
+                    rangeProvider = customRangeProvider
+                )
 
-        val xAxis = chart.xAxis
-        xAxis.position = XAxis.XAxisPosition.BOTTOM
-        xAxis.setDrawGridLines(true)
-        xAxis.gridColor = Color.DKGRAY
-        xAxis.textColor = Color.WHITE
-        xAxis.textSize = 10f
-        xAxis.valueFormatter = object : ValueFormatter() {
-            private val sdf = SimpleDateFormat("HH:mm:ss dd/MM", Locale.getDefault())
-            override fun getFormattedValue(value: Float): String {
-                return try {
-                    sdf.format(Date(value.toLong()))
-                } catch (e: Exception) {
-                    ""
+                val chart = rememberCartesianChart(
+                    lineLayer,
+                    startAxis = startAxis,
+                    bottomAxis = bottomAxis
+                )
+
+                Row(modifier = Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
+                    // Clickable Y-axis label vertically on the immediate left
+                    Box(
+                        modifier = Modifier
+                            .padding(end = 8.dp)
+                            .layout { measurable, constraints ->
+                                val placeable = measurable.measure(constraints)
+                                layout(placeable.height, placeable.width) {
+                                    placeable.place(
+                                        x = -(placeable.width / 2 - placeable.height / 2),
+                                        y = -(placeable.height / 2 - placeable.width / 2)
+                                    )
+                                }
+                            }
+                            .rotate(-90f)
+                            .background(Color(0xFFD6D7D7), shape = androidx.compose.foundation.shape.RoundedCornerShape(4.dp))
+                            .clickable {
+                                val newUnit = if (unit == "C") "F" else "C"
+                                plotUnitState.value = newUnit
+                                setPreference("plotUnit", newUnit)
+                                updateVicoChart()
+                            }
+                            .padding(horizontal = 5.dp, vertical = 3.dp)
+                    ) {
+                        Text(
+                            text = "Temperature ($unit)",
+                            color = Color.Black,
+                            fontSize = 8.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.align(Alignment.Center)
+                        )
+                    }
+
+                    CartesianChartHost(
+                        chart = chart,
+                        modelProducer = modelProducer,
+                        modifier = Modifier.fillMaxSize().weight(1f),
+                        scrollState = rememberVicoScrollState(scrollEnabled = true),
+                        zoomState = rememberVicoZoomState(zoomEnabled = true, initialZoom = remember { Zoom.Content })
+                    )
                 }
             }
         }
-
-        val leftAxis = chart.axisLeft
-        leftAxis.setDrawGridLines(true)
-        leftAxis.gridColor = Color.DKGRAY
-        leftAxis.textColor = Color.WHITE
-        leftAxis.textSize = 10f
-
-        chart.axisRight.isEnabled = false
-
-	// 1. Define the unique configuration pairs for your nodes (Label to Color)
-        val nodeConfigs = arrayOf(
-            "Node 1" to Color.GREEN,
-            "Node 3" to Color.BLUE
-        )
-
-        // 2. Instantiate a single, master container for the chart
-        val lineData = LineData()
-
-        // 3. Loop through the configurations to dynamically generate and style each dataset
-        for ((label, nodeColor) in nodeConfigs) {
-            val d = LineDataSet(ArrayList(), label).apply {
-                color = nodeColor
-                lineWidth = 2.0f
-                setDrawCircles(false)
-                valueTextColor = Color.TRANSPARENT
-                setDrawValues(false)
-            }
-
-            // Append the newly created dataset directly to lineData
-            lineData.addDataSet(d)
-        }
-
-        chart.data = lineData
-        chart.invalidate()
     }
 
-    // Refresh the chart with the provided data, and scroll to the
-    // viewpoint to the x-value given by x (typically the last point
-    // in the data stream).  If chart or data are not provided, get it
-    // from global mLineChart.
-    //
-    // This is ~zero overhead if called with valid chart and data.
-    //
-    // DISABLED Refreshplot() With It Functionality Incorporated In Redrawthrottled()
-    fun refreshPlot(x: Double, chart: LineChart? = null, data: LineData? = null) {
-	return
-	// val mychart = chart ?: mLineChart ?: return
-	// val mydata = data ?: mychart.data ?: return
+    private fun updateVicoChart() {
+        if (nodeSeriesData[0].isEmpty() && nodeSeriesData[1].isEmpty()) return
 
-	// mydata.notifyDataChanged()
-	// mychart.notifyDataSetChanged()
+        val series0 = synchronized(nodeSeriesData[0]) { nodeSeriesData[0].toList() }
+        val series1 = synchronized(nodeSeriesData[1]) { nodeSeriesData[1].toList() }
 
-	// // Scroll the viewport to the new point on the right
-	// mychart.moveViewToX(x.toFloat())
-    }
-
-    // When building the chart the first time:
-    //   dataSet.addEntry(Entry(x.toFloat(), y.toFloat()))
-    //   chart.notifyDataSetChanged()
-    //
-    // For appending data to existing plot:
-    //   dataSet.addEntry(Entry(x.toFloat(), y.toFloat()),index)
-    // if (dataRemoved)
-    //   chart.notifyDataSetChanged()
-    //
-    fun addNewData(seriesIndex: Int, x: Double, y: Double,force: Boolean=false) {
-        val chart = mLineChart ?: return
-        val data = chart.data ?: return
-        val dataSet = data.getDataSetByIndex(seriesIndex) as? LineDataSet ?: return
-
-        val entryCount = dataSet.entryCount
-        if (entryCount > 0) {
-            val lastEntry = dataSet.getEntryForIndex(entryCount - 1)
-            // If the sensor value did not change don't make a new entry
-            //if ((y.toFloat() == lastEntry.y) && ((x.toFloat() - lastEntry.y)/1000F < NaaradUtils.NEW_PLOT_DATA_TIMESCALE))
-
-            if ((y.toFloat() == lastEntry.y) && !force) return
-            // if (abs(y.toFloat() - lastEntry.y) < 0.1 && !force) return
+        val unit = plotUnitState.value
+        val convertY: (Double) -> Double = { y ->
+            if (unit == "F") y * 9.0 / 5.0 + 32.0 else y
         }
 
-        // 1. Add the new data point
-        dataSet.addEntry(Entry(x.toFloat(), y.toFloat()))
-
-        // 2. Remove all points older than user-defined
-        // NaaradUtils.livePlotTimeRange, relative to the new point x
-        val newXSec = x.toFloat() / 1000f
-        while (dataSet.entryCount > 1) {
-            val firstXSec = dataSet.getEntryForIndex(0).x / 1000f
-            if (newXSec - firstXSec > NaaradUtils.livePlotTimerange) {
-                dataSet.removeFirst()
-            } else {
-                break
+        lifecycleScope.launch(Dispatchers.Default) {
+            modelProducer.runTransaction {
+                lineSeries {
+                    series(
+                        x = series0.map { it.x },
+                        y = series0.map { convertY(it.y) }
+                    )
+                    series(
+                        x = series1.map { it.x },
+                        y = series1.map { convertY(it.y) }
+                    )
+                }
             }
         }
-
-	//refreshPlot(x, chart, data)
     }
 
+    private fun pruneOldData(seriesList: MutableList<TelemetryDataPoint>) {
+        if (seriesList.isEmpty()) return
+        val currentMaxX = seriesList.last().x
+        val timeRangeSec = NaaradUtils.livePlotTimerange
+        val minX = currentMaxX - (timeRangeSec * 1000.0)
+        
+        synchronized(seriesList) {
+            val idx = seriesList.indexOfFirst { it.x >= minX }
+            if (idx > 0) {
+                seriesList.subList(0, idx).clear()
+            }
+        }
+    }
+    
     fun abortSleeperForTimeoutChange() {
         mSensorDataSource?.abortSleeper()
     }
@@ -406,43 +341,92 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
         mSensorDataSource?.finish()
     }
 
-    override fun onDestroy() {
-        Log.d("NPF::onDestroy()", "NPF destroyed")
-        if (activeInstance == this) activeInstance = null
-        super.onDestroy()
-        stopDataSource()
-    }
 
     override fun onResume() {
-        Log.d("NPF::onResume","NPF resumed")
         super.onResume()
-        applyChartTheme()
+        themeModeState = getPreference("themeMode", 0)
     }
 
-    override fun onPause() {
-        Log.d("NPF::onPause","NPF paused")
-        super.onPause()
-        myApp?.myWakeLock?.let { wakeLock ->
-            if (wakeLock.isHeld) {
-                wakeLock.release()
-                Log.d("NPF::onPause", "Releasing wake lock")
+    override fun onDestroyView() {
+
+        super.onDestroyView()
+        activeInstance = null
+    }
+
+    fun parseReading(json: JSONObject): Triple<Double, Double, Int>? {
+	var timestamp = json.optDouble("time", -1.0)
+	if (timestamp < 0) return null
+	if (timestamp > 0 && timestamp < 10_000_000_000.0) {
+            timestamp *= 1000.0
+	}
+
+	val nodeId = json.optInt("node_id", -1)
+	if (nodeId < 0) return null
+
+	val temp = json.optDouble("degc", Double.NaN)
+	if (temp.isNaN()) return null
+
+	return Triple(timestamp, temp, nodeId)
+    }
+
+    private fun publishJSON(jsonList: ArrayList<String>, startIndex: Int) {
+        val map = NaaradUtils.nodeID2NdxMap
+	val mapCount = map?.size ?: 0
+        var updated = false
+	var lastY=-1.0
+	
+        for (i in startIndex until jsonList.size) {
+            val message = jsonList[i]
+            if (!message.contains("{")) continue
+            val jsonStart = message.indexOf('{')
+            val jsonEnd = message.lastIndexOf('}')
+            if (jsonStart < 0 || jsonEnd <= jsonStart) continue
+
+            try {
+                val json = JSONObject(message.substring(jsonStart, jsonEnd + 1))
+		var (timestamp, temp, nodeid) = parseReading(json) ?: continue
+
+		if (temp !=  lastY) {
+                    val sIndex = map[nodeid]
+		    lastY=temp
+                    if (sIndex != null && sIndex in 0..mapCount) {
+			val relativeX = timestamp - baseTimestampState.value
+			// Vico throws 'The x values are too precise' if they exceed 4 decimal places of precision.
+			// By forcing relativeX to a whole number, we guarantee no decimal issues during GCD.
+			val roundedRelativeX = kotlin.math.round(relativeX)
+			val point = TelemetryDataPoint(roundedRelativeX, temp)
+			synchronized(nodeSeriesData[sIndex]) {
+
+
+                            nodeSeriesData[sIndex].add(point)
+                            pruneOldData(nodeSeriesData[sIndex])
+			}
+			updated = true
+		    }
+                }
+            } catch (e: Exception) {
+                Log.d("NaaradPlotFragment", "Error parsing JSON: ${e.message}")
+            }
+        }
+
+    }
+
+    private fun publishJSON(message: String, force: Boolean = false) {
+        publishJSON(arrayListOf(message), 0)
+        val jsonStart = message.indexOf('{')
+        val jsonEnd = message.lastIndexOf('}')
+        if (jsonStart >= 0 && jsonEnd > jsonStart) {
+            val jsonStr = message.substring(jsonStart, jsonEnd + 1)
+            try {
+                // Pre-validate that it parses correctly before broadcasting to MainActivity
+                org.json.JSONObject(jsonStr)
+                mMainActivityCallback?.onDataArrival(jsonStr)
+            } catch (e: Exception) {
+                android.util.Log.e("NaaradPlotFragment", "Failed to parse JSON for callback: $jsonStr")
             }
         }
     }
-
-    fun startAllCharts(n: Int) {
-        if ((n == 0) || (n == -1)) {
-            if (mSensorDataSource == null || mSensorDataSource?.isRunning == false) {
-                mSensorDataSource = SensorDataSource()
-                mSensorDataSource?.execute()
-            }
-        }
-    }
-
-    fun stopAllCharts(n: Int) {
-        mSensorDataSource?.cancel(true)
-    }
-
+    
     protected inner class SensorDataSource {
         protected var nodeid: Int = 0
         @Volatile var allDone = false
@@ -486,531 +470,257 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
             }
         }
 
-        fun executeOnExecutor(executor: Any?) {
-            execute()
-        }
-
-	// Open a naarad socket
-        private fun openNaaradSocket(host: String,
-				     port: Int,
-				     client: String=""): Socket? {
-	    val socket = activeSocket ?:
-		naaradSocket(host, port)?.also { activeSocket = it } ?:
-		run {
-		    Log.d(client,"Error in openNaaradSocket "+
-				     "(${NaaradUtils.serverName}, "+
-				     "${NaaradUtils.serverPort})")
-		    return null
-		}
-	    return socket;
-	}
-
-	//
-	// Send "done" message to the Naarad server.  That closes the
-	// socket on the server side.
-	//
-	private fun finishNaaradProtocol(mySocWriter: PrintWriter)
-	{
-            naaradWriter(mySocWriter, "done")
-	}
-	//
-	// This is typically called after finishNaaradProtocol() which
-	// closes the socket on the server side.  This closes the
-	// socket on the client side as well.
-	//
-	private fun closeNaaradSocket()
-	{
-	    activeSocket?.close()
-	    activeSocket=null;
-	}
-
-	//
-	// Publish the JSON packet array.  This updates the UI (finalizePublishJSON())
-	// once, at the end.
-	//
-        private fun publishJSON(messages: ArrayList<String>, n:Int, force :Boolean=false) {
-	    //var jsonStr: String?=null
-	    for (i in n until messages.size) {
-		//jsonStr=publishJSONEngine(messages[i],force)
-		publishJSON(messages[i],force)
-	    }
-	    //finalizePublishJSON(jsonStr)
-	}
-	//
-	// Publish a single JSON packet
-	//
-	private fun publishJSON(message: String, force :Boolean=false) {
-	    val jsonStr = publishJSONEngine(message,force) ?: null
-	    //finalizePublishJSON(jsonStr)
-	}
-
-	//
-	// JSON publishing engine.  This adds new data for plotting on
-	// the main thread, calls finalizePublishJSON at the end and
-	// returns the published JSON packet.
-	//
-        private fun publishJSONEngine(message: String, force :Boolean=false): String? {
-            val jsonStart = message.indexOf('{')
-            val jsonEnd = message.lastIndexOf('}')
-            if (jsonStart < 0 || jsonEnd <= jsonStart) {
-                Log.d("publishJSON","publishJSON: Error in message" + message)
+        private fun openNaaradSocket(host: String, port: Int, client: String=""): Socket? {
+            val socket = activeSocket ?: naaradSocket(host, port)?.also { activeSocket = it } ?: run {
+                Log.d(client, "Error in openNaaradSocket (${NaaradUtils.serverName}, ${NaaradUtils.serverPort})")
                 return null
             }
+            return socket
+        }
 
-            val jsonStr = message.substring(jsonStart, jsonEnd + 1)
-            val json = JSONObject(jsonStr)
-	    var validJSON: String?=null
-            if (json.optInt("rf_fail", 0) == 0) {
-                val nodeid: Int = json.optInt("node_id", 1)
-                var timestamp = json.optDouble("time", System.currentTimeMillis().toDouble())
-                if (timestamp > 0 && timestamp < 10_000_000_000.0) {
-                    timestamp *= 1000.0
-                }
-                x0 = timestamp
-                y0 = json.optDouble("degc", 0.0)
+        private fun finishNaaradProtocol(mySocWriter: PrintWriter) {
+            naaradWriter(mySocWriter, "done")
+        }
 
-                val map: HashMap<Int?, Int?> = NaaradUtils.nodeID2NdxMap
-                val dataSetCount = mLineChart?.data?.dataSetCount ?: 1
-                val seriesIndex: Int = (map[nodeid] ?: 0).coerceIn(0, (dataSetCount - 1).coerceAtLeast(0))
+        private fun closeNaaradSocket() {
+            activeSocket?.close()
+            activeSocket = null
+        }
 
-                val plotUnit = getPreference("plotUnit", "C") ?: "C"
-                val displayY = if (plotUnit == "F") {
-                    y0 * 9.0 / 5.0 + 32.0
-                } else {
-                    y0
-                }
-
-                val curX = x0
-                val curY = displayY
-
-		activity?.runOnUiThread {
-                    addNewData(seriesIndex, curX, curY, force)
-                    mMainActivityCallback?.onDataArrival(jsonStr)
-                    reDrawThrottled()
-		}
-		validJSON = jsonStr
-            } else {
-                uiToast("Packet invalid (rf_fail=1)", Gravity.BOTTOM)
-                return jsonStr
-            }
-	    // finalizePublishJSON(latestJSON)
-
-	    return validJSON;
-      }
-
-	// private fun finalizePublishJSON(jsonStr: String? = null) {
-	//     // 1. Bail out immediately on the background thread if the Fragment is already detached
-	//     val hostActivity = activity ?: return
-	//     if (!isAdded || view == null) return
-
-	//     hostActivity.runOnUiThread {
-	// 	// 2. Re-check lifecycle inside the lambda because runOnUiThread runs asynchronously later
-	// 	if (!isAdded || view == null) return@runOnUiThread
-
-	// 	if (jsonStr != null) {
-	// 	    mMainActivityCallback?.onDataArrival(jsonStr)
-	// 	}
-	// 	reDrawThrottled()
-	//     }
-	// }
-
-	//
-	// Update the UI for published JSON packets.  Update the
-	// current sensor values (onDataArrival()) and the line chart
-	// in Sensors tab.
-	//
-	private fun finalizePublishJSON(jsonStr: String?=null)
-	{
-            activity?.runOnUiThread {
-                mMainActivityCallback?.onDataArrival(jsonStr)
-                reDrawThrottled()
-            }
-	}
-	//
-        // Fetches historical messages and returns an Array of
-	// ArrayList<String> where messages for node keys[i] are
-	// placed at index NaaradUtils.nodeID2NdxMap[keys[i]].
-	//
-        private fun naaradGetDataHistoryEngine(
+        fun naaradGetDataHistoryEngine(
             keys: IntArray,
             mySoc: Socket,
             publish: Boolean = true
-        ): Array<ArrayList<String>> {
-            val map = NaaradUtils.nodeID2NdxMap
-            val maxIndex = (map.values.filterNotNull().maxOrNull() ?: 1) + 1
-            val messagesArray = Array(maxIndex) { ArrayList<String>() }
-
+        ): ArrayList<ArrayList<String>>? {
+            val messagesArray = ArrayList<ArrayList<String>>()
+            for (k in keys) messagesArray.add(ArrayList())
             val mySocWriter = PrintWriter(mySoc.getOutputStream(), true)
             val mySocReader = BufferedReader(InputStreamReader(mySoc.getInputStream()), 1000)
+            activeSocket = mySoc
 
-            naaradWriter(mySocWriter, message = "NaaradApp_GetHistoryEngine")
-            SystemClock.sleep(100)
+            naaradWriter(mySocWriter, message = "NaaradApp_GetDataHistoryEngine")
 
-            var nPackets: Int = 0
+            var nPackets = 0
             for (i in keys.indices) {
                 if (allDone || isCancelled) break
                 val nodeid = keys[i]
-                val seriesIndex = (map[nodeid] ?: i).coerceIn(0, messagesArray.size - 1)
-                val msg = "gethpkt $nodeid"
-                Log.d("naaradGetDataHistoryEngine", "=== Requesting Historical Data for Sensor Node ===" + msg)
-                naaradWriter(mySocWriter, msg)
-                SystemClock.sleep(100)
+                val request = "gethpkt $nodeid"
+                naaradWriter(mySocWriter, request)
 
-                doReDraw = true
                 var message = ""
-                while (!message.contains("PHINISHED")) {
-                    message = NaaradUtils.naaradReader(mySocReader)
-                    nPackets++
+                while (message.isNotEmpty() || !message.contains("PHINISHED")) {
+                    if (allDone || isCancelled) break
+                    message = NaaradUtils.naaradReader(mySocReader, tag = "gethpkt")
                     if (message.contains("PHINISHED")) {
-                        Log.d("naaradGetDataHistoryEngine", "=== Completed Historical Data for Sensor Node $nodeid === " + nPackets)
+                        break
                     }
                     if (!message.contains("PHINISHED") && message.contains("{")) {
-                        if (publish) {
-                            publishJSON(message)
+                        messagesArray[i].add(message)
+                        nPackets++
+                    }
+                }
+                
+                if (publish && messagesArray[i].isNotEmpty()) {
+                    publishJSON(messagesArray[i], 0)
+                    
+                    // Find the last packet that actually contains a valid JSON payload
+                    val lastValidMsg = messagesArray[i].lastOrNull { it.contains("{") }
+                    if (lastValidMsg != null) {
+                        val jsonStart = lastValidMsg.indexOf('{')
+                        val jsonEnd = lastValidMsg.lastIndexOf('}')
+                        if (jsonStart >= 0 && jsonEnd > jsonStart) {
+                            mMainActivityCallback?.onDataArrival(lastValidMsg.substring(jsonStart, jsonEnd + 1))
                         }
-                        messagesArray[seriesIndex].add(message)
                     }
                 }
             }
 
             if (nPackets > 0 && publish) {
                 activity?.runOnUiThread {
-                    reDrawForce()
+                    updateVicoChart()
                 }
             }
 
             try {
-		finishNaaradProtocol(mySocWriter)
-		closeNaaradSocket()
-            }
-	    catch (ignored: Exception) {}
-
+                finishNaaradProtocol(mySocWriter)
+                closeNaaradSocket()
+            } catch (ignored: Exception) {}
 
             return messagesArray
         }
 
+        private fun naaradGetCurrentDataEngine(
+            keys: IntArray,
+            mySoc: Socket,
+            publish: Boolean = true
+        ): ArrayList<String> {
+            val messagesList = ArrayList<String>()
+            val mySocWriter = PrintWriter(mySoc.getOutputStream(), true)
+            val mySocReader = BufferedReader(InputStreamReader(mySoc.getInputStream()), 1000)
+            activeSocket = mySoc
 
-	private fun naaradGetCurrentDataEngine(
-	    keys: IntArray,
-	    mySoc: Socket,
-	    publish: Boolean = true): ArrayList<String>
-	{
-	    val messagesList = ArrayList<String>()
-	    val mySocWriter = PrintWriter(mySoc.getOutputStream(), true)
-	    val mySocReader = BufferedReader(InputStreamReader(mySoc.getInputStream()),1000)
+            naaradWriter(mySocWriter, message = "NaaradApp_GetCurrentDataEngine")
 
-	    naaradWriter(mySocWriter, message="NaaradApp_GetCurrentDataEngine")
+            for (i in keys.indices) {
+                if (allDone || isCancelled) break
+                val request = "getcpkt " + keys[i].toString()
+                naaradWriter(mySocWriter, request)
+                val message = NaaradUtils.naaradReader(mySocReader, tag = "getcpkt")
 
-	    for (i in keys.indices)
-	    {
-		if (allDone || isCancelled) break
+                if (message.isNotEmpty()) {
+                    if (message.contains("{") && publish) publishJSON(message)
+                    messagesList.add(message)
+                }
+            }
 
-		// Get single data message for node keys[i]
-		val request: String="getcpkt "+keys[i].toString()
-		naaradWriter(mySocWriter, request)
-		val message = NaaradUtils.naaradReader(mySocReader, tag="getcpkt")
+            if (messagesList.isNotEmpty() && publish) {
+                activity?.runOnUiThread { updateVicoChart() }
+            }
 
-		// If the message is valid, publish it and add the messages list.
-		if (message.isNotEmpty())
-		{
-		    if (message.contains("{") && publish) publishJSON(message);
-		    messagesList.add(message)
-		}
-	    }
+            try {
+                finishNaaradProtocol(mySocWriter)
+                closeNaaradSocket()
+            } catch (ignored: Exception) {}
 
-	    // Send done signal to the server when finished querying all nodes
-	    try {
-		finishNaaradProtocol(mySocWriter)
-		closeNaaradSocket()
-	    }
-	    catch (ignored: Exception) {}
+            return messagesList
+        }
 
-	    return messagesList
-	}
+        private fun naaradGetData(keys: IntArray, getHistory: Boolean) {
+            val host = NaaradUtils.serverName
+            val port = NaaradUtils.serverPort
+            val socket = openNaaradSocket(host, port, "naaradGetData") ?: return
+            activeSocket = socket
 
-	//
-	// This calls naaradGetDataHistoryEngine() or
-	// naaradGetCurrentDataEngine(). Both close the socket at the
-	// end of their communication.
-	//
-	private fun naaradGetData(
-	    keys: IntArray,
-	    getHistory: Boolean
-	) {
-	    val host = NaaradUtils.serverName
-	    val port = NaaradUtils.serverPort
-	    
-	    // Assign to a local non-null val, creating and storing a new socket only if activeSocket is null
-	    val socket = openNaaradSocket(host, port, "naaradGetData") ?: return
+            try {
+                if (getHistory) {
+                    naaradGetDataHistoryEngine(keys, socket)
+                } else {
+                    val messages = naaradGetCurrentDataEngine(keys, socket)
+                    for (m in messages) {
+                        Log.d("naaradGetDat", m)
+                    }
+                }
+            } catch (e: Exception) {
+                Log.d("NaaradPlotFragment", "Error: " + e.message)
+            } finally {
+                closeNaaradSocket()
+            }
+        }
 
-	    try {
-		if (getHistory) {
-		    naaradGetDataHistoryEngine(keys, socket)
-		} else {
-		    val messages = naaradGetCurrentDataEngine(keys, socket)
-		    for (m in messages) {
-			Log.d("naaradGetDat", m)
-		    }
-		}
-	    } catch (e: Exception) {
-		Log.d("naaradGetData", "Error: " + e.message)
-	    } finally {
-		closeNaaradSocket()
-	    }
-	}
+        private fun parseTimestampFromMessage(message: String): Long {
+            return try {
+                val jsonStart = message.indexOf('{')
+                val jsonEnd = message.lastIndexOf('}')
+                if (jsonStart >= 0 && jsonEnd > jsonStart) {
+                    val json = JSONObject(message.substring(jsonStart, jsonEnd + 1))
+                    var timestamp = json.optDouble("time", System.currentTimeMillis().toDouble())
+                    if (timestamp > 0 && timestamp < 10_000_000_000.0) {
+                        timestamp *= 1000.0
+                    }
+                    timestamp.toLong()
+                } else {
+                    System.currentTimeMillis()
+                }
+            } catch (e: Exception) {
+                System.currentTimeMillis()
+            }
+        }
 
-	private fun parseTimestampFromMessage(message: String): Long
-	{
-	    return try
-	    {
-		val jsonStart = message.indexOf('{')
-		val jsonEnd = message.lastIndexOf('}')
-		//	if (isMessageValid(message)
+        private fun syncData(keys: IntArray) {
+            if (keys.isEmpty() || allDone || isCancelled) return
+            val host = NaaradUtils.serverName
+            val port = NaaradUtils.serverPort
 
-		if (jsonStart >= 0 && jsonEnd > jsonStart)
-		{
-		    val json = JSONObject(message.substring(jsonStart, jsonEnd + 1))
-		    var timestamp = json.optDouble("time", System.currentTimeMillis().toDouble())
-		    if (timestamp > 0 && timestamp < 10_000_000_000.0)
-		    {
-			timestamp *= 1000.0
-		    }
-		    timestamp.toLong()
-		}
-		else
-		{
-		    System.currentTimeMillis()
-		}
-	    }
-	    catch (e: Exception)
-	    {
-		System.currentTimeMillis()
-	    }
-	}
+            try {
+                val socket = openNaaradSocket(host, port, "syncData") ?: return
+                activeSocket = socket
+                val messages = naaradGetCurrentDataEngine(keys, socket, publish = false)
+                val firstMsg = messages.getOrNull(0) ?: ""
 
-	//
-	// Based on the time difference between latest data and the last
-	// plotted data, decide if historical data should be acquired and
-	// published.  If not, this acts like
-	// naaradGetData(keys,getHistory=false).
-	//
-	// If historical data is re-acquired, align the time-axis of
-	// plotted and historical data, and append the missing data
-	// from the historical data stream.
-	//
-	// This effectively calls both naaradGetCurrentDataEngine()
-	// and naaradGetDataHistoryEngine() (in this order).  Since
-	// the first closes the socket, it needs to be re-opened
-	// before the second call.
-	//
-	private fun syncData(keys: IntArray) {
-	    if (keys.isEmpty() || allDone || isCancelled) return
-	    val host = NaaradUtils.serverName
-	    val port = NaaradUtils.serverPort
+                if (firstMsg.contains("{")) {
+                    val latestTimeMs = parseTimestampFromMessage(firstMsg)
+                    val firstNode = keys[0]
+                    val map = NaaradUtils.nodeID2NdxMap
+                    val seriesIndex = map[firstNode] ?: 0
 
-	    try {
-		val socket = openNaaradSocket(host,port,"syncData") ?: return
+                    val list = synchronized(nodeSeriesData[seriesIndex]) { nodeSeriesData[seriesIndex].toList() }
+                    val lastPlotTimeMs = if (list.isNotEmpty()) (list.last().x + baseTimestampState.value).toLong() else 0L
 
-		val messages = naaradGetCurrentDataEngine(keys, socket, publish = false)
-		val firstMsg = messages.getOrNull(0) ?: ""
+                    val timeDiffMs = latestTimeMs - lastPlotTimeMs
+                    var gotHistory = false
 
-		if (firstMsg.contains("{")) {
-		    // Compute latestTimeMs and lastPlotTimeMs for the first node
-		    val latestTimeMs = parseTimestampFromMessage(firstMsg)
-		    val firstNode = keys[0]
+                    if (lastPlotTimeMs > 0 && timeDiffMs > NaaradUtils.livePlotReSyncTimescale * 1000L) {
+                        closeNaaradSocket()
+                        val histSocket = openNaaradSocket(host, port, "syncData") ?: return
+                        activeSocket = histSocket
+                        val hmessages = naaradGetDataHistoryEngine(keys, histSocket, publish = false)
+                        if (hmessages != null) {
+                            gotHistory = true
+                            for (nodeid in keys) {
+                                val sIndex = map[nodeid] ?: 0
+                                val nodeHistMessages = hmessages.getOrNull(sIndex) ?: ArrayList()
+                                val nodeList = synchronized(nodeSeriesData[sIndex]) { nodeSeriesData[sIndex].toList() }
+        
+                                if (nodeHistMessages.isNotEmpty()) {
+                                    if (nodeList.isNotEmpty()) {
+                                        val lastT = (nodeList.last().x + baseTimestampState.value).toLong()
+                                        val n = nodeHistMessages.indexOfFirst { msg ->
+                                            parseTimestampFromMessage(msg) > lastT
+                                        }
+                                        if (n != -1) {
+                                            publishJSON(nodeHistMessages, n)
+                                        }
+                                    } else {
+                                        for (msg in nodeHistMessages) {
+                                            publishJSON(msg, force = true)
+                                        }
+                                    }
+                                }
+                            }
+                        }
 
-		    val map = NaaradUtils.nodeID2NdxMap
-		    val seriesIndex = map[firstNode] ?: 0
-		    val dataSet = mLineChart?.data?.getDataSetByIndex(seriesIndex) as? LineDataSet
+                        activity?.runOnUiThread {
+                            updateVicoChart()
+                        }
+                    }
 
-		    val lastPlotTimeMs = if (dataSet != null && dataSet.entryCount > 0) {
-			dataSet.getEntryForIndex(dataSet.entryCount - 1).x.toLong()
-		    } else 0L
-
-		    val timeDiffMs = latestTimeMs - lastPlotTimeMs
-		    var gotHistory = false
-
-		    // Check if time difference > livePlotReSyncTimescale
-		    if (lastPlotTimeMs > 0 && timeDiffMs > NaaradUtils.livePlotReSyncTimescale * 1000L) {
-			Log.d("syncData", "Gap of ${"%.2f".format(timeDiffMs / 60000F)}m > " +
-			      "${"%.2f".format(NaaradUtils.livePlotReSyncTimescale * 1000L / 60000F)}m for node $firstNode. Fetching history...")
-
-			// // 1. Re-acquire historical data on a fresh socket
-			closeNaaradSocket()
-			val histSocket = openNaaradSocket(host, port) ?: run {
-			    Log.d("syncData", "Unable to open historical socket to $host:$port")
-			    return
-			}
-
-			val hmessages = naaradGetDataHistoryEngine(keys, histSocket, publish = false) ?:  run {
-			    Log.d("syncData", "Error in getting historical data")
-			    return
-			}
-			gotHistory = true
-
-			var lastX = 0.0
-
-			// 2. Process historical data for each node: append only points with timestamps > lastT
-			for (nodeid in keys) {
-			    val sIndex = map[nodeid] ?: 0
-			    val nodeHistMessages = hmessages.getOrNull(sIndex) ?: ArrayList()
-			    val nodeDataSet = mLineChart?.data?.getDataSetByIndex(sIndex) as? LineDataSet
-
-			    if (nodeHistMessages.isNotEmpty()) {
-				if (nodeDataSet != null && nodeDataSet.entryCount > 0) {
-				    // Get timestamp of last plotted point for this node
-				    val lastT = nodeDataSet.getEntryForIndex(nodeDataSet.entryCount - 1).x.toLong()
-
-				    // Find first historical point with timestamp strictly greater than lastT
-				    val n = nodeHistMessages.indexOfFirst { msg ->
-					parseTimestampFromMessage(msg) > lastT
-				    }
-
-				    // Append only points with timestamps later than lastT
-				    if (n != -1) {
-					publishJSON(nodeHistMessages,n)
-					// for (i in n until nodeHistMessages.size) {
-					//     publishJSON(nodeHistMessages[i])
-					// }
-				    }
-				} else {
-				    // Plot is empty: publish all historical messages for this node
-				    for (msg in nodeHistMessages) {
-					publishJSON(msg, force = true)
-				    }
-				}
-
-				if (nodeDataSet != null && nodeDataSet.entryCount > 0) {
-				    val curLastX = nodeDataSet.getEntryForIndex(nodeDataSet.entryCount - 1).x.toDouble()
-				    if (curLastX > lastX) lastX = curLastX
-				}
-			    }
-			}
-
-			// 3. Use refreshPlot() to re-plot the resulting plot data streams for each node
-			activity?.runOnUiThread {
-			    refreshPlot(lastX)
-			}
-		    }
-
-		    // Always publish current messages
-		    for (m in messages) {
-			if (allDone || isCancelled) break
-			if (m.contains("{")) {
-			    publishJSON(m, force = gotHistory)
-			}
-		    }
-		}
-	    } catch (e: Exception) {
-		Log.d("syncData", "Error in syncData: ${e.javaClass.simpleName}: " + e.message)
-	    } finally {
-		// Close naarad protocol, and then close the naarad
-		// socket
-		try {
-		    activeSocket?.getOutputStream()?.let { outStream ->
-			val writer = PrintWriter(outStream, true)
-			finishNaaradProtocol(writer)
-		    }
-		} catch (ignored: Exception) {}
-		try {
-		    closeNaaradSocket()
-		} catch (ignored: Exception) {}
-	    }
-	}
+                    for (m in messages) {
+                        if (allDone || isCancelled) break
+                        if (m.contains("{")) {
+                            publishJSON(m, force = gotHistory)
+                        }
+                    }
+                    activity?.runOnUiThread { updateVicoChart() }
+                }
+            } catch (e: Exception) {
+                Log.d("NaaradPlotFragment", "Error in syncData: ${e.message}")
+            } finally {
+                try {
+                    activeSocket?.getOutputStream()?.let { outStream ->
+                        val writer = PrintWriter(outStream, true)
+                        finishNaaradProtocol(writer)
+                    }
+                } catch (ignored: Exception) {}
+                closeNaaradSocket()
+            }
+        }
 
         fun doInBackground(): String? {
-            val retStr = "AllOK"
             allDone = false
             nConnected = true
             sleeper.reset()
             val keys = getKeysAsArray(nodeID2NdxMap)
 
-            naaradGetData(keys, getHistory = true) // Get historical data
+            naaradGetData(keys, getHistory = true)
 
-	    // NaaradUtils.livePingTimeout is a cached version of
-	    // NaaradUtils.currentPingTimeout.  When the latter is
-	    // changed, it is made persistent via setPreferences() and
-	    // re-cached for efficient access at run time.
-	    while (!allDone) {
-		// This always gets the latest value of Ping timeout.
-		// Internally, this variable is updated from Settings
-		// tab if the user changes the value.  Accessing
-		// livePingTimeout in a tight loop is no different
-		// from using a variable.
+            while (!allDone) {
                 val pingTO: Long = ((NaaradUtils.livePingTimeout) * 1000).roundToLong()
-		//Log.d("doInBG","pingTO = "+pingTO.toString())
-
-		// An interruptible sleep, which is interrupted if
-		// NaaradUtils.currentPingTimeout is updated
-		// (currently from the
-		// NaaradSettingFragment.kt). NaaradUtils.currentPingTimeout
-		// is cached in NaaradUtils.livePingTimeout variable.
                 sleeper.sleep(pingTO)
                 sleeper.reset()
-
-		if (allDone) break
-
-		// Get historical data, or the latest data point
-		// depending on when the last plotted data was
-		// acquired.
-		syncData(keys);
-
-//		naaradGetData(keys, false) // Get the latest data point
+                if (allDone) break
+                syncData(keys)
             }
-
-            return retStr
-        }
-
-        @Volatile private var lastRedrawTime = 0L
-
-    // When building the chart the first time:
-    //   dataSet.addEntry(Entry(x.toFloat(), y.toFloat()))
-    //   chart.notifyDataSetChanged()
-    //
-    // For appending data to existing plot:
-    //   dataSet.addEntry(Entry(x.toFloat(), y.toFloat()),index)
-    // if (dataRemoved)
-    //   chart.notifyDataSetChanged()
-    //
-	protected fun reDrawThrottled() {
-	    if (doReDraw && mLineChart != null && !stopRecording) {
-		val now = SystemClock.uptimeMillis()
-//		if (now - lastRedrawTime >= 100L) {
-		    lastRedrawTime = now
-		    val chartData = mLineChart?.data ?: return
-		    chartData.notifyDataChanged() // Needed only when data is removed
-		    mLineChart?.notifyDataSetChanged()
-		    mLineChart?.moveViewToX(chartData.xMax) // Scrolls to latest point
-		    //mLineChart?.invalidate()
-//		}
-	    }
-	}
-	
-        protected fun reDrawForce() {
-            if (doReDraw && mLineChart != null && !stopRecording) {
-                mLineChart?.data?.notifyDataChanged()
-                mLineChart?.notifyDataSetChanged()
-                mLineChart?.invalidate()
-            }
-        }
-
-        fun onCancelled() {
-            finish()
-        }
-    }
-
-    companion object {
-        private var mView: View? = null
-
-        @Volatile
-        var activeInstance: NaaradPlotFragment? = null
-
-        fun newInstanceNPF(sampleText: String?): NaaradPlotFragment {
-            val f = NaaradPlotFragment()
-            val b = Bundle()
-            b.putString("bString", sampleText)
-            f.setArguments(b)
-            return f
+            return "AllOK"
         }
     }
 }

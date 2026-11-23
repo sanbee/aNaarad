@@ -5,8 +5,8 @@
 		tools:context="naarad.client.tabhost.MainActivity"
 		android:id="@+id/plotRL" >
 
-    <naarad.client.tabhost.VerticalTitleLineChart
-       android:id="@+id/lineChart"
+    <androidx.compose.ui.platform.ComposeView
+       android:id="@+id/composeView"
        android:layout_width="match_parent"
        android:layout_height="match_parent"
        />
