@@ -62,6 +62,10 @@ import java.util.HashMap
 import java.util.Locale
 import kotlin.math.roundToLong
 
+import android.content.BroadcastReceiver
+import android.content.Intent
+import android.content.IntentFilter
+
 class NaaradPlotFragment : NaaradAbstractFragment() {
     private var apiLevel = 0
     var myApp: NaaradApp? = null
@@ -186,7 +190,6 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
                     val timestampMs = baseTimestampState.value + x
                     val date = Date(timestampMs.toLong())
                     val timeFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
-                    //val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
                     val dateFormat = SimpleDateFormat("dd/MM", Locale.getDefault())
                     timeFormat.format(date) + "\n" + dateFormat.format(date)
                 }
@@ -351,6 +354,46 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
 
         super.onDestroyView()
         activeInstance = null
+    }
+
+    //
+    // Make a wakeup receiver.  Upon wake up reset the ISleep so that
+    // the loop in doInBackground() exectures syncData().
+    //
+    private val screenWakeReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            val action = intent?.action
+            if (action == Intent.ACTION_SCREEN_ON || action == Intent.ACTION_USER_PRESENT) {
+                Log.d("NaaradPlotFragment", "Device woke up ($action) - resetting sleeper")
+                mSensorDataSource?.let { ds ->
+                    ds.sleeper.reset()
+                    ds.abortSleeper()
+                }
+            }
+        }
+    }
+
+    // Register the wakeup receiver
+    override fun onStart() {
+        super.onStart()
+        val filter = IntentFilter().apply {
+            addAction(Intent.ACTION_SCREEN_ON)
+            addAction(Intent.ACTION_USER_PRESENT)
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            requireContext().registerReceiver(screenWakeReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            @Suppress("UnspecifiedRegisterReceiverFlag")
+            requireContext().registerReceiver(screenWakeReceiver, filter)
+        }
+    }
+
+    // Un-register the wakeup receiver
+    override fun onStop() {
+        super.onStop()
+        try {
+            requireContext().unregisterReceiver(screenWakeReceiver)
+        } catch (ignored: Exception) {}
     }
 
     fun parseReading(json: JSONObject): Triple<Double, Double, Int>? {
@@ -650,6 +693,10 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
                     var gotHistory = false
 
                     if (lastPlotTimeMs > 0 && timeDiffMs > NaaradUtils.livePlotReSyncTimescale * 1000L) {
+			Log.d("syncData", "Gap of ${"%.2f".format(timeDiffMs / 60000F)}m > "
+			      +"${"%.2f".format(NaaradUtils.livePlotReSyncTimescale * 1000L / 60000F)}m "
+			      +"for node $firstNode. Fetching history...")
+
                         closeNaaradSocket()
                         val histSocket = openNaaradSocket(host, port, "syncData") ?: return
                         activeSocket = histSocket
