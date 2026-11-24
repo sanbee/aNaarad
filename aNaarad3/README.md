@@ -1,8 +1,8 @@
 # aNaarad (aNaarad3)
 
-[![Android CI](https://img.shields.io/badge/Android-SDK%2035-brightgreen.svg)](https://developer.android.com)
-[![Kotlin](https://img.shields.io/badge/Kotlin-2.0-blue.svg)](https://kotlinlang.org)
-[![Chart Engine](https://img.shields.io/badge/Plotting-MPAndroidChart%20v3.1.0-orange.svg)](https://github.com/PhilJay/MPAndroidChart)
+[![Android CI](https://img.shields.io/badge/Android-SDK%2037-brightgreen.svg)](https://developer.android.com)
+[![Kotlin](https://img.shields.io/badge/Kotlin-2.4-blue.svg)](https://kotlinlang.org)
+[![Chart Engine](https://img.shields.io/badge/Plotting-Vico%20Compose%20v2.1.3-orange.svg)](https://github.com/patrykandpatrick/vico)
 
 **aNaarad** is a modern, responsive native Android client application designed for real-time smart home telemetry, multi-node sensor data acquisition, time-series plotting, and interactive device control.
 
@@ -23,7 +23,8 @@ The app communicates directly over local TCP sockets with a home telemetry serve
 - **Live Sensor Speak-Bubbles**: Real-time temperature speech bubbles positioned over room locations. Single-tap any speak-bubble to toggle displayed units between **°C** and **°F** with persistent preference saving.
 
 ### 2. 📈 Sensors Tab
-- **High-Performance Plotting**: Time-series telemetry plotting powered by **MPAndroidChart**.
+- **High-Performance Plotting**: Time-series telemetry plotting powered by **Vico (Jetpack Compose)**, using a hybrid XML-to-Compose `ComposeView` interop architecture.
+- **Adaptive Scaling & Layouts**: Dynamically calculates and adjusts Y-axis bounds directly from live telemetry data arrays for optimal viewport spacing, combined with Compose-rendered Top Legends and interactive axes.
 - **Historical Data Resync**: Automatically detects data gaps greater than the configured resync timescale and backfills missing historical streams seamlessly.
 - **Rolling Window**: Automatically prunes entries older than the configured plot timerange to optimize RAM usage while maintaining a rolling history window.
 - **Interactive Y-Axis Unit Switching**: Single-tap the vertical Y-axis label button (**"Temperature (C)"** / **"Temperature (F)"**) to dynamically convert on-screen plot values between °C and °F.
@@ -38,9 +39,9 @@ The app communicates directly over local TCP sockets with a home telemetry serve
 ## 🛠️ Architecture & Tech Stack
 
 - **Language**: 100% Kotlin (targeting Java 11 JVM Bytecode)
-- **Target SDK**: Android 15 (API 35) \| **Min SDK**: Android 8.0 (API 26)
+- **Target SDK**: Android 15+ (API 37) \| **Min SDK**: Android 8.0 (API 26)
 - **UI Architecture**: `TabLayout` + `ViewPager2` + `TabLayoutMediator` with custom `TextView` tab views and adaptive alpha selection
-- **Plotting Library**: `MPAndroidChart v3.1.0` with custom vertical Y-axis rendering
+- **Plotting Library**: `Vico v2.1.3` with `Jetpack Compose` interop (`ComposeView`)
 - **Concurrency & Sockets**: Custom non-blocking `iSleep` thread synchronization (`CountDownLatch`) and non-blocking TCP socket readers
 
 ---
