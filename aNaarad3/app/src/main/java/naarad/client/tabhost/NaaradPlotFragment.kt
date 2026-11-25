@@ -285,6 +285,7 @@ class NaaradPlotFragment : NaaradAbstractFragment() {
 
                     CartesianChartHost(
                         chart = chart,
+			animationSpec = null,
                         modelProducer = modelProducer,
                         modifier = Modifier.fillMaxSize().weight(1f),
                         scrollState = rememberVicoScrollState(scrollEnabled = true),
